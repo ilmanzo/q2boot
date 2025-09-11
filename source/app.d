@@ -163,7 +163,10 @@ struct VirtualMachine
         string[] args;
         args ~= ["-enable-kvm", "-cpu", "host"];
         args ~= ["-smp", to!string(cpu), "-m", format("%dG", ram)];
-        args ~= ["-drive", format("file=%s,if=virtio,cache=none,aio=native,discard=unmap", diskPath)];
+        args ~= [
+            "-drive",
+            format("file=%s,if=virtio,cache=none,aio=native,discard=unmap", diskPath)
+        ];
         args ~= ["-audiodev", "none,id=snd0"];
 
         if (interactive)
@@ -216,10 +219,8 @@ void main(string[] args)
         return;
     }
 
-    auto vm = VirtualMachine(
-        cpu: 1, ram: 2, logFile: "console.log",
-        sshPort: 2222, noSnapshot: false, interactive: false
-    );
+    auto vm = VirtualMachine(cpu: 1, ram: 2, logFile: "console.log", sshPort: 2222,
+noSnapshot: false, interactive: false);
 
     string configDir = buildPath(environment.get("HOME"), ".config", "qboot");
     string configFile = buildPath(configDir, "config.json");
@@ -233,16 +234,9 @@ void main(string[] args)
 
     try
     {
-        auto helpInfo = getopt(
-            args,
-            "disk|d", &vm.diskPath,
-            "cpu|c", &vm.cpu,
-            "ram|r", &vm.ram,
-            "interactive|i", &vm.interactive,
-            "no-snapshot|S", &vm.noSnapshot,
-            "log|l", &vm.logFile,
-            "ssh-port", &vm.sshPort
-        );
+        auto helpInfo = getopt(args, "disk|d", &vm.diskPath, "cpu|c", &vm.cpu,
+                "ram|r", &vm.ram, "interactive|i", &vm.interactive, "no-snapshot|S",
+                &vm.noSnapshot, "log|l", &vm.logFile, "ssh-port", &vm.sshPort);
 
         if (helpInfo.helpWanted || vm.diskPath.empty)
         {
@@ -298,9 +292,7 @@ unittest
     assert(config.headlessSavesChanges == true);
 
     // Test partial config (should use defaults)
-    auto partialJson = JSONValue([
-        "cpu": JSONValue(6)
-    ]);
+    auto partialJson = JSONValue(["cpu": JSONValue(6)]);
 
     auto partialConfig = parseConfig(partialJson);
     assert(partialConfig.cpu == 6);
