@@ -1,7 +1,8 @@
 # QBoot 🚀
 
 A handy QEMU VM launcher that simplifies virtual machine management with sensible defaults and easy configuration.
-see the companion blog post at https://ilmanzo.github.io/post/qemu-dlang-helper/
+
+See the companion blog post at https://ilmanzo.github.io/post/qemu-dlang-helper/
 
 ## Overview
 
