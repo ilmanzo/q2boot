@@ -163,14 +163,12 @@ struct VirtualMachine
         string[] args;
         args ~= ["-enable-kvm", "-cpu", "host"];
         args ~= ["-smp", to!string(cpu), "-m", format("%dG", ram)];
-        args ~= ["-mem-path", "/dev/hugepages"];
         args ~= ["-drive", format("file=%s,if=virtio,cache=none,aio=native,discard=unmap", diskPath)];
         args ~= ["-audiodev", "none,id=snd0"];
 
         if (interactive)
         {
             args ~= ["-display", "default,show-cursor=on"];
-            args ~= ["-device", "usb-tablet"];
         }
         else
         {
