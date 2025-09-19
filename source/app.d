@@ -3,6 +3,7 @@ import config;
 import x86_64;
 import ppc64le;
 import s390x;
+import aarch64;
 import std.stdio;
 import std.getopt;
 import std.process : environment;
@@ -21,11 +22,6 @@ version (unittest)
 
 void main(string[] args)
 {
-    version (unittest)
-    {
-        // Skip main when running unit tests
-        return;
-    }
 
     string configDir = buildPath(environment.get("HOME"), ".config", "qboot");
     string configFile = buildPath(configDir, "config.json");
@@ -43,51 +39,43 @@ void main(string[] args)
         }
         catch (Exception e)
         {
-            stderr.writeln("Warning: Could not parse config file '", configFile, "': ", e.msg);
+            stderr.writeln("Error parsing config file: ", e.msg);
         }
     }
 
     string diskPath, cpu, ram, logFile, arch;
-    bool interactive, noSnapshot;
+    bool graphical, noSnapshot, confirm;
     ushort sshPort;
 
     try
     {
-        auto helpInfo = getopt(args, "arch|a", &arch, "disk|d", &diskPath, "cpu|c", &cpu, "ram|r",
-            &ram, "interactive|i", &interactive, "no-snapshot|S", &noSnapshot,
-            "log|l", &logFile, "ssh-port", &sshPort, );
-
-        if (helpInfo.helpWanted || diskPath.empty)
-        {
-            writeln("qboot - A handy QEMU VM launcher");
-            writeln();
-            writeln("USAGE:");
-            writeln("    qboot [OPTIONS] --disk <path>");
-            writeln();
-            writeln("EXAMPLES:");
-            writeln("    qboot --disk ubuntu.qcow2");
-            writeln("    qboot --disk fedora.img --cpu 4 --ram 8 --interactive");
-            writeln("    qboot --arch ppc64le --disk debian.qcow2 --ssh-port 2223");
-            writeln("    qboot --disk test.img --no-snapshot --log vm.log");
-            writeln();
-            writeln("OPTIONS:");
-
-            // Custom help formatting with proper option descriptions
-            writeln("    -a, --arch <arch>        Target architecture (default: x86_64, options: x86_64, ppc64le)");
-            writeln("    -d, --disk <path>        Path to disk image file (required)");
-            writeln("    -c, --cpu <count>        Number of CPU cores (default: 2)");
-            writeln("    -r, --ram <gb>           RAM size in GB (default: 4)");
-            writeln("    -i, --interactive        Enable interactive mode with QEMU monitor");
-            writeln("    -S, --no-snapshot        Disable snapshot mode (changes will be saved to disk)");
-            writeln("    -l, --log <file>         Log file path (default: console.log)");
-            writeln("        --ssh-port <port>    SSH port forwarding (default: 2222)");
-            writeln("    -h, --help               Show this help message");
-
-            writeln();
-            writeln("Configuration file: ~/.config/qboot/config.json");
-            writeln("Command line options override configuration file settings.");
-            return;
-        }
+        auto options = getopt(
+            args,
+            "d", "disk", &diskPath,
+            "c", "cpu", &cpu,
+            "r", "ram", &ram,
+            "g", "graphical", &graphical,
+            "w", "write-mode", &noSnapshot,
+            "p", "ssh-port", &sshPort,
+            "l", "log-file", &logFile,
+            "a", "arch", &arch,
+            "confirm", &confirm,
+            "help", {
+                writeln("Usage: qboot [options]");
+                writeln("Options:");
+                writeln("  -d, --disk <path>      Path to the qcow2 disk image (required)");
+                writeln("  -c, --cpu <cores>      Number of CPU cores (default: ", config.cpu, ")");
+                writeln("  -r, --ram <GB>         Amount of RAM in GB (default: ", config.ramGb, ")");
+                writeln("  -g, --graphical        Enable graphical console (default: disabled)");
+                writeln("  -w, --write-mode       Enable write mode (changes are saved to disk)");
+                writeln("  -p, --ssh-port <port>  Host port for SSH forwarding (default: ", config.sshPort, ")");
+                writeln("  -l, --log-file <path>  Path to the log file (default: ", config.logFile, ")");
+                writeln("  -a, --arch <arch>      Architecture (x86_64, ppc64le, s390x, aarch64) (default: ", config.arch, ")");
+                writeln("      --confirm          Show command and wait for keypress before starting");
+                writeln("      --help             Show this help message");
+                return;
+            }
+        );
     }
     catch (Exception e)
     {
@@ -112,7 +100,9 @@ void main(string[] args)
         case "s390x":
             vm = new S390X_VM();
             break;
-
+        case "aarch64":
+            vm = new AARCH64_VM();
+            break;
         default:
             stderr.writeln("Error: Unsupported architecture '", config.arch,
                 "' in config file.");
@@ -129,8 +119,9 @@ void main(string[] args)
         vm.cpu = cpu.to!int;
     if (!ram.empty)
         vm.ram = ram.to!int;
-    vm.interactive = interactive;
+    vm.graphical = graphical;
     vm.noSnapshot = noSnapshot;
+    vm.confirm = confirm;
     if (!logFile.empty)
         vm.logFile = logFile;
     if (sshPort != 0)
