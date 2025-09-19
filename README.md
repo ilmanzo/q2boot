@@ -12,8 +12,9 @@ QBoot is a command-line tool written in D that wraps QEMU to provide a streamlin
 
 - **Zero-config startup**: Works out of the box with sensible defaults
 - **JSON configuration**: Persistent settings via `~/.config/qboot/config.json`
-- **Interactive and headless modes**: GUI or console-only operation
+- **Graphical and headless modes**: GUI or console-only operation
 - **Snapshot support**: Choose whether to persist changes
+- **Multi-architecture support**: Works with x86_64, aarch64, ppc64le, and s390x
 - **KVM acceleration**: Automatic hardware acceleration when available
 - **SSH-ready networking**: Built-in port forwarding for easy access
 - **Comprehensive testing**: Full test suite with >95% coverage
@@ -40,28 +41,33 @@ make install
 # Launch a VM with a disk image
 ./qboot -d /path/to/your/disk.img
 
-# Interactive mode with GUI
-./qboot -d disk.img --interactive
+# Graphical mode
+./qboot -d disk.img -g
 
 # Custom CPU and RAM settings
 ./qboot -d disk.img --cpu 4 --ram 8
 
 # Headless mode with persistent changes
-./qboot -d disk.img --no-snapshot
+./qboot -d disk.img -w
+
+# Show command before running
+./qboot -d disk.img --confirm
 ```
 
 ## Command Line Options
 
 | Option | Short | Description | Default |
 |--------|-------|-------------|---------|
+| `--arch` | `-a` | CPU architecture (`x86_64`, `aarch64`, etc.) | `x86_64` |
 | `--disk` | `-d` | Path to disk image (required) | - |
 | `--cpu` | `-c` | Number of CPU cores | 2 |
 | `--ram` | `-r` | RAM in GB | 4 |
-| `--interactive` | `-i` | Enable GUI mode | false |
-| `--no-snapshot` | `-S` | Persist changes to disk | false |
-| `--log` | `-l` | Serial console log file | console.log |
-| `--ssh-port` | - | SSH port forwarding | 2222 |
-| `--help` | `-h` | Show help message | - |
+| `--graphical` | `-g` | Enable graphical console | false |
+| `--write-mode` | `-w` | Persist changes to disk (disables snapshot) | false |
+| `--ssh-port` | `-p` | Host port for SSH forwarding | 2222 |
+| `--log-file` | `-l` | Serial console log file | `qboot.log` |
+| `--confirm` | | Show command and wait for keypress before starting | false |
+| `--help` | | Show help message | - |
 
 ## Configuration
 
@@ -70,11 +76,11 @@ QBoot automatically creates a configuration file at `~/.config/qboot/config.json
 ```json
 {
   "description": "Default configuration for qboot. Edit these values to fit your workflow.",
+  "arch": "x86_64",
   "cpu": 2,
-  "ram_gb": 4,
-  "ssh_port": 2222,
-  "log_file": "console.log",
-  "headless_saves_changes": false
+  "ramGb": 4,
+  "sshPort": 2222,
+  "logFile": "qboot.log"
 }
 ```
 
@@ -89,13 +95,13 @@ Configuration values are applied in this order (highest priority first):
 
 ```bash
 # Start a development VM with GUI
-qboot -d ubuntu-dev.img -i -c 4 -r 8
+qboot -d ubuntu-dev.img -g -c 4 -r 8
 
 # Quick headless test (changes discarded)
 qboot -d test-image.img
 
 # Persistent headless server
-qboot -d server.img -S --ssh-port 2223
+qboot -d server.img -w --ssh-port 2223
 ```
 
 ### SSH Access
@@ -111,7 +117,7 @@ ssh -p 2222 user@localhost
 Monitor the VM's serial console:
 
 ```bash
-tail -f console.log
+tail -f qboot.log
 ```
 
 ## Architecture
@@ -131,11 +137,8 @@ QBoot generates commands similar to:
 qemu-system-x86_64 \
   -enable-kvm -cpu host \
   -smp 2 -m 4G \
-  -mem-path /dev/hugepages \
   -drive file=disk.img,if=virtio,cache=none,aio=native,discard=unmap \
-  -netdev user,id=net0,hostfwd=tcp::2222-:22 \
-  -device virtio-net-pci,netdev=net0 \
-  -nographic -snapshot
+  -netdev user,id=net0,hostfwd=tcp::2222
 ```
 
 ## Development
