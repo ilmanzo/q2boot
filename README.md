@@ -52,6 +52,7 @@ make install
 
 | Option | Short | Description | Default |
 |--------|-------|-------------|---------|
+| `--arch` | `-a` | CPU architecture (`x86_64`, `aarch64`, etc.) | `x86_64` |
 | `--disk` | `-d` | Path to disk image (required) | - |
 | `--cpu` | `-c` | Number of CPU cores | 2 |
 | `--ram` | `-r` | RAM in GB | 4 |
@@ -68,6 +69,7 @@ QBoot automatically creates a configuration file at `~/.config/qboot/config.json
 ```json
 {
   "description": "Default configuration for qboot. Edit these values to fit your workflow.",
+  "arch": "x86_64",
   "cpu": 2,
   "ram_gb": 4,
   "ssh_port": 2222,
