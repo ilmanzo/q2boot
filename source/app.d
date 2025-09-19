@@ -14,11 +14,6 @@ import std.path;
 import std.json;
 import std.exception;
 
-version (unittest)
-{
-    import std.algorithm;
-    import std.random;
-}
 
 void main(string[] args)
 {

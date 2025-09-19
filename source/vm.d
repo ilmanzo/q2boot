@@ -72,13 +72,15 @@ abstract class VirtualMachine
      */
     this()
     {
-        this.cpu = 1;
-        this.ram = 2;
-        this.logFile = "console.log";
-        this.sshPort = 2222;
-        this.noSnapshot = false;
-        this.graphical = false;
-        this.confirm = false;
+        // Initialize with default values from a default config
+        VMConfig config;
+        this.cpu = config.cpu;
+        this.ram = config.ramGb;
+        this.sshPort = config.sshPort;
+        this.logFile = config.logFile;
+        this.graphical = config.graphical;
+        this.noSnapshot = config.writeMode;
+        this.confirm = config.confirm;
     }
 
     /**
@@ -97,7 +99,7 @@ abstract class VirtualMachine
             this.ram = config.ramGb;
             this.logFile = config.logFile;
             this.sshPort = config.sshPort;
-            this.noSnapshot = config.headlessSavesChanges;
+            this.noSnapshot = config.writeMode;
         }
         catch (Exception e)
         {

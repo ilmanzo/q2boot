@@ -39,7 +39,9 @@ JSONValue createDefaultConfig()
         "ram_gb": JSONValue(4),
         "ssh_port": JSONValue(2222),
         "log_file": JSONValue("console.log"),
-        "headless_saves_changes": JSONValue(false),
+        "write_mode": JSONValue(false),
+        "graphical": JSONValue(false),
+        "confirm": JSONValue(false),
         "arch": JSONValue("x86_64"),
     ]);
 }
@@ -51,17 +53,31 @@ VMConfig parseConfig(JSONValue json)
 {
     VMConfig config;
 
+    // Set defaults first
+    config.cpu = 2;
+    config.ramGb = 4;
+    config.sshPort = 2222;
+    config.logFile = "console.log";
+    config.writeMode = false;
+    config.graphical = false;
+    config.confirm = false;
+    config.arch = "x86_64";
+
+    // Override with values from JSON if they exist
     if ("cpu" in json)
         config.cpu = to!int(json["cpu"].get!long);
     if ("ram_gb" in json)
         config.ramGb = to!int(json["ram_gb"].get!long);
-    if ("log_file" in json)
-        config.logFile = json["log_file"].get!string;
     if ("ssh_port" in json)
         config.sshPort = to!ushort(json["ssh_port"].get!long);
-
-    if ("headless_saves_changes" in json)
-        config.headlessSavesChanges = json["headless_saves_changes"].get!bool;
+    if ("log_file" in json)
+        config.logFile = json["log_file"].get!string;
+    if ("write_mode" in json)
+        config.writeMode = json["write_mode"].get!bool;
+    if ("graphical" in json)
+        config.graphical = json["graphical"].get!bool;
+    if ("confirm" in json)
+        config.confirm = json["confirm"].get!bool;
     if ("arch" in json)
         config.arch = json["arch"].get!string;
 
@@ -69,25 +85,22 @@ VMConfig parseConfig(JSONValue json)
 }
 
 /**
- * Ensures the configuration directory and a default config.json file exist.
+ * Ensures that the configuration directory and file exist.
+ * If they don't, it creates them with default values.
  */
-void ensureConfigFileExists(string dirPath, string filePath)
+void ensureConfigFileExists(string configDir, string configFile)
 {
-    if (filePath.exists)
-        return;
-
-    try
+    if (!configDir.exists)
     {
-        writeln("Configuration file not found. Creating a default at '", filePath, "'...");
-        dirPath.mkdirRecurse();
-
-        auto defaultConfig = createDefaultConfig();
-        std.file.write(filePath, defaultConfig.toPrettyString());
-
+        writeln("Creating config directory at '", configDir, "'");
+        configDir.mkdirRecurse();
     }
-    catch (Exception e)
+
+    if (!configFile.exists)
     {
-        stderr.writeln("Warning: Could not create default config file: ", e.msg);
+        writeln("No config file found. Creating default config at '", configFile, "'");
+        auto defaultConfig = createDefaultConfig();
+        std.file.write(configFile, toJSON(defaultConfig, true));
     }
 }
 
@@ -98,15 +111,15 @@ void ensureConfigFileExists(string dirPath, string filePath)
 unittest
 {
     writeln("Running createDefaultConfig tests...");
-
-    auto config = createDefaultConfig();
-    assert(config["cpu"].get!long == 2);
-    assert(config["ram_gb"].get!long == 4);
-    assert(config["ssh_port"].get!long == 2222);
-    assert(config["log_file"].get!string == "console.log");
-    assert(config["headless_saves_changes"].get!bool == false);
-    assert(config["arch"].get!string == "x86_64");
-
+    auto defaultConfig = createDefaultConfig();
+    assert(defaultConfig["cpu"].get!long == 2);
+    assert(defaultConfig["ram_gb"].get!long == 4);
+    assert(defaultConfig["ssh_port"].get!long == 2222);
+    assert(defaultConfig["log_file"].get!string == "console.log");
+    assert(defaultConfig["write_mode"].get!bool == false);
+    assert(defaultConfig["graphical"].get!bool == false);
+    assert(defaultConfig["confirm"].get!bool == false);
+    assert(defaultConfig["arch"].get!string == "x86_64");
     writeln("✓ createDefaultConfig tests passed");
 }
 
@@ -114,32 +127,39 @@ unittest
 {
     writeln("Running parseConfig tests...");
 
-    // Test valid config
-    auto json = JSONValue([
+    // Test full config
+    auto fullJson = JSONValue([
         "cpu": JSONValue(4),
         "ram_gb": JSONValue(8),
         "ssh_port": JSONValue(3333),
         "log_file": JSONValue("test.log"),
-        "headless_saves_changes": JSONValue(true),
+        "write_mode": JSONValue(true),
+        "graphical": JSONValue(true),
+        "confirm": JSONValue(true),
         "arch": JSONValue("aarch64")
     ]);
 
-    auto config = parseConfig(json);
-    assert(config.cpu == 4);
-    assert(config.ramGb == 8);
-    assert(config.sshPort == 3333);
-    assert(config.logFile == "test.log");
-    assert(config.headlessSavesChanges == true);
-    assert(config.arch == "aarch64");
+    auto fullConfig = parseConfig(fullJson);
+    assert(fullConfig.cpu == 4);
+    assert(fullConfig.ramGb == 8);
+    assert(fullConfig.sshPort == 3333);
+    assert(fullConfig.logFile == "test.log");
+    assert(fullConfig.writeMode == true);
+    assert(fullConfig.graphical == true);
+    assert(fullConfig.confirm == true);
+    assert(fullConfig.arch == "aarch64");
 
-    // Test partial config (should use defaults)
-    auto partialJson = JSONValue(["cpu": JSONValue(6)]);
-
+    // Test partial config (should use defaults for missing keys)
+    auto partialJson = JSONValue(["cpu": JSONValue(1)]);
     auto partialConfig = parseConfig(partialJson);
-    assert(partialConfig.cpu == 6);
-    assert(partialConfig.ramGb == 2); // default
-    assert(partialConfig.sshPort == 2222); // default
-    assert(partialConfig.arch == "x86_64"); // default
+    assert(partialConfig.cpu == 1);
+    assert(partialConfig.ramGb == 4); // Should be default
+    assert(partialConfig.sshPort == 2222); // Should be default
+    assert(partialConfig.logFile == "console.log"); // Should be default
+    assert(partialConfig.writeMode == false); // Should be default
+    assert(partialConfig.graphical == false); // Should be default
+    assert(partialConfig.confirm == false); // Should be default
+    assert(partialConfig.arch == "x86_64"); // Should be default
 
     writeln("✓ parseConfig tests passed");
 }
