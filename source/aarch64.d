@@ -23,8 +23,7 @@ class AARCH64_VM : VirtualMachine
         return [
             "-machine", "virt",
             "-cpu", "max",
-            "-bios", "/usr/share/qemu/aavmf-aarch64-code.bin"
-           
+            "-bios", "/usr/share/qemu/aavmf-aarch64-code.bin",
         ];
     }
 
@@ -33,7 +32,7 @@ class AARCH64_VM : VirtualMachine
     {
         return [
             "-drive",
-            format("file=%s,if=virtio,cache=none,aio=native,discard=unmap", diskPath)
+            format("file=%s,if=virtio,cache=writeback,aio=native,discard=unmap,cache.direct=on", diskPath)
         ];
     }
 

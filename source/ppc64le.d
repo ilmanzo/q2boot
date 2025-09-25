@@ -25,7 +25,7 @@ class PPC64LE_VM : VirtualMachine
     {
         return [
             "-drive",
-            format("file=%s,if=virtio,cache=none,aio=native,discard=unmap", diskPath)
+            format("file=%s,if=virtio,cache=writeback,aio=native,discard=unmap,cache.direct=on", diskPath)
         ];
     }
 

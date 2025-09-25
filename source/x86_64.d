@@ -17,7 +17,7 @@ class X86_64_VM : VirtualMachine
     /// Returns an array of architecture-specific QEMU arguments.
     override string[] getArchArgs()
     {
-        return ["-M", "q35"];
+        return ["-M", "q35", "-enable-kvm", "-cpu", "host"];
     }
 
     /// Returns an array of QEMU arguments for graphical output.
@@ -31,7 +31,7 @@ class X86_64_VM : VirtualMachine
     {
         return [
             "-drive",
-            format("file=%s,if=virtio,cache=none,aio=native,discard=unmap", diskPath)
+            format("file=%s,if=virtio,cache=writeback,aio=native,discard=unmap,cache.direct=on", diskPath)
         ];
     }
 
