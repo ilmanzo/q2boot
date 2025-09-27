@@ -75,7 +75,6 @@ QBoot automatically creates a configuration file at `~/.config/qboot/config.json
 
 ```json
 {
-  "description": "Default configuration for qboot. Edit these values to fit your workflow.",
   "arch": "x86_64",
   "cpu": 2,
   "ramGb": 4,

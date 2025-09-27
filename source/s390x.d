@@ -1,7 +1,7 @@
 module s390x;
 
-import vm;
 import std.format;
+import vm;
 
 /**
  * Concrete implementation of the VirtualMachine for s390x architecture.
@@ -19,8 +19,7 @@ class S390X_VM : VirtualMachine
     {
         return [
             "-machine", "s390-ccw-virtio",
-            "-object", "rng-random,id=rng0,filename=/dev/random",
-            "-device", "virtio-rng-ccw,rng=rng0"
+            "-cpu", "max",
         ];
     }
 
@@ -29,9 +28,9 @@ class S390X_VM : VirtualMachine
     {
         return [
             "-drive",
-            format("file=%s,id=disk1,if=none,cache=none,aio=native,discard=unmap", diskPath),
+            format("file=%s,id=disk1,if=none,cache=unsafe,discard=unmap", diskPath),
             "-device",
-            "virtio-blk-ccw,drive=disk1"
+            "virtio-blk-ccw,drive=disk1,id=dr1,bootindex=1"
         ];
     }
 
@@ -42,7 +41,7 @@ class S390X_VM : VirtualMachine
             "-netdev",
             format("user,id=net1,hostfwd=tcp::%d-:22", sshPort),
             "-device",
-            "virtio-net-ccw,netdev=net1"
+            "virtio-net-ccw,netdev=net1",
         ];
     }
 
@@ -53,7 +52,8 @@ class S390X_VM : VirtualMachine
     {
         return [
             "-nographic",
-            "-serial", "mon:stdio"
+            "-serial", "stdio",
+            "-monitor", "none"
         ];
     }
 }
