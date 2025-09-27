@@ -41,20 +41,11 @@ void main(string[] args)
     bool graphical, noSnapshot, confirm;
     ushort sshPort;
 
-    try
+    // Check for help options first - if found anywhere, show help and exit
+    foreach (arg; args[1 .. $])
     {
-        auto options = getopt(
-            args,
-            "d", "disk", &diskPath,
-            "c", "cpu", &cpu,
-            "r", "ram", &ram,
-            "g", "graphical", &graphical,
-            "w", "write-mode", &noSnapshot,
-            "p", "ssh-port", &sshPort,
-            "l", "log-file", &logFile,
-            "a", "arch", &arch,
-            "confirm", &confirm,
-            "help", {
+        if (arg == "--help" || arg == "-h" || arg == "help")
+        {
             writeln("Usage: qboot [options]");
             writeln("Options:");
             writeln("  -d, --disk <path>      Path to the qcow2 disk image (required)");
@@ -66,14 +57,69 @@ void main(string[] args)
             writeln("  -l, --log-file <path>  Path to the log file (default: ", config.logFile, ")");
             writeln("  -a, --arch <arch>      Architecture (x86_64, ppc64le, s390x, aarch64) (default: ", config.arch, ")");
             writeln("      --confirm          Show command and wait for keypress before starting");
-            writeln("      --help             Show this help message");
+            writeln("  -h, --help             Show this help message");
             return;
         }
+    }
+
+    try
+    {
+        // Check for common mistakes with single-dash long options
+        foreach (arg; args[1 .. $])
+        {
+            if (arg == "-confirm")
+            {
+                stderr.writeln(
+                    "Error: Long options require double dashes. Use '--confirm' instead of '-confirm'");
+                return;
+            }
+        }
+
+        auto options = getopt(
+            args,
+            "d", "disk", &diskPath,
+            "c", "cpu", &cpu,
+            "r", "ram", &ram,
+            "g", "graphical", &graphical,
+            "w", "write-mode", &noSnapshot,
+            "p", "ssh-port", &sshPort,
+            "l", "log-file", &logFile,
+            "a", "arch", &arch,
+            "confirm", &confirm
         );
+
+        // Additional validation for non-numeric CPU/RAM values
+        if (!cpu.empty)
+        {
+            try
+            {
+                cpu.to!int;
+            }
+            catch (ConvException e)
+            {
+                stderr.writeln("Error: Invalid CPU value '", cpu, "'. Please provide a numeric value (e.g., --cpu=2)");
+                stderr.writeln("Hint: If you meant to use --confirm, use double dashes: --confirm");
+                return;
+            }
+        }
+
+        if (!ram.empty)
+        {
+            try
+            {
+                ram.to!int;
+            }
+            catch (ConvException e)
+            {
+                stderr.writeln("Error: Invalid RAM value '", ram, "'. Please provide a numeric value (e.g., --ram=4)");
+                return;
+            }
+        }
     }
     catch (Exception e)
     {
         stderr.writeln("Error: ", e.msg);
+        stderr.writeln("Use --help to see available options.");
         return;
     }
 
