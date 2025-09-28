@@ -1,12 +1,10 @@
-# QBoot 🚀
+# QBoot - Go Version 🚀
 
-A handy QEMU VM launcher that simplifies virtual machine management with sensible defaults and easy configuration.
-
-See the companion blog post at https://ilmanzo.github.io/post/qemu-dlang-helper/
+A handy QEMU VM launcher rewritten in idiomatic, concise, and modern Go. This is a complete rewrite of the original D language version, providing the same functionality with improved performance and maintainability.
 
 ## Overview
 
-QBoot is a command-line tool written in D that wraps QEMU to provide a streamlined experience for launching virtual machines. It automatically configures common settings like KVM acceleration, virtio drivers, and networking while allowing customization through both configuration files and command-line options.
+QBoot is a command-line tool that wraps QEMU to provide a streamlined experience for launching virtual machines. It automatically configures common settings like KVM acceleration, virtio drivers, and networking while allowing customization through both configuration files and command-line options.
 
 ## Features
 
@@ -18,10 +16,12 @@ QBoot is a command-line tool written in D that wraps QEMU to provide a streamlin
 - **KVM acceleration**: Automatic hardware acceleration when available
 - **SSH-ready networking**: Built-in port forwarding for easy access
 - **Comprehensive testing**: Full test suite with >95% coverage
+- **Modern CLI**: Built with Cobra for excellent user experience
+- **Cross-platform**: Compiles to native binaries for multiple platforms
 
-## Quick Start
+## Installation
 
-### Installation
+### From Source
 
 ```bash
 # Clone the repository
@@ -29,29 +29,35 @@ git clone https://github.com/yourusername/qboot.git
 cd qboot
 
 # Build the project
-dub build
+make build
 
 # Install system-wide (optional)
 make install
 ```
 
+### Pre-built Binaries
+
+Download pre-built binaries from the [releases page](https://github.com/yourusername/qboot/releases).
+
+## Quick Start
+
 ### Basic Usage
 
 ```bash
 # Launch a VM with a disk image
-./qboot -d /path/to/your/disk.img
+./build/qboot -d /path/to/your/disk.img
 
 # Graphical mode
-./qboot -d disk.img -g
+qboot -d disk.img -g
 
 # Custom CPU and RAM settings
-./qboot -d disk.img --cpu 4 --ram 8
+qboot -d disk.img --cpu 4 --ram 8
 
 # Headless mode with persistent changes
-./qboot -d disk.img -w
+qboot -d disk.img -w
 
 # Show command before running
-./qboot -d disk.img --confirm
+qboot -d disk.img --confirm
 ```
 
 ## Command Line Options
@@ -67,7 +73,8 @@ make install
 | `--ssh-port` | `-p` | Host port for SSH forwarding | 2222 |
 | `--log-file` | `-l` | Serial console log file | `qboot.log` |
 | `--confirm` | | Show command and wait for keypress before starting | false |
-| `--help` | | Show help message | - |
+| `--help` | `-h` | Show help message | - |
+| `--version` | | Show version information | - |
 
 ## Configuration
 
@@ -77,9 +84,12 @@ QBoot automatically creates a configuration file at `~/.config/qboot/config.json
 {
   "arch": "x86_64",
   "cpu": 2,
-  "ramGb": 4,
-  "sshPort": 2222,
-  "logFile": "qboot.log"
+  "ram_gb": 2,
+  "ssh_port": 2222,
+  "log_file": "qboot.log",
+  "write_mode": false,
+  "graphical": false,
+  "confirm": false
 }
 ```
 
@@ -121,12 +131,27 @@ tail -f qboot.log
 
 ## Architecture
 
-QBoot is structured around several key components:
+The Go version is structured around clean, idiomatic Go patterns:
 
-- **Configuration Management**: JSON-based settings with validation
-- **VM Parameter Validation**: Ensures safe and valid QEMU parameters
-- **Command Generation**: Builds optimized QEMU command lines
-- **Error Handling**: Graceful handling of common issues
+### Project Structure
+
+```
+qboot/
+├── cmd/qboot/          # Main application entry point
+├── internal/config/    # Configuration management
+├── internal/vm/        # VM implementations
+├── Makefile           # Build automation
+├── go.mod             # Go module definition
+└── README_GO.md       # This file
+```
+
+### Key Components
+
+- **Configuration Management**: Viper-based settings with JSON persistence
+- **VM Abstraction**: Clean interface-based design for different architectures
+- **Command Line Interface**: Cobra-powered CLI with excellent UX
+- **Error Handling**: Proper Go error handling with meaningful messages
+- **Testing**: Comprehensive test suite with good coverage
 
 ### Generated QEMU Command
 
@@ -134,19 +159,14 @@ QBoot generates commands similar to:
 
 ```bash
 qemu-system-x86_64 \
-  -enable-kvm -cpu host \
+  -M q35 -enable-kvm -cpu host \
   -smp 2 -m 4G \
-  -drive file=disk.img,if=virtio,cache=none,aio=native,discard=unmap \
-  -netdev user,id=net0,hostfwd=tcp::2222
+  -drive file=disk.img,if=virtio,cache=writeback,aio=native,discard=unmap,cache.direct=on \
+  -netdev user,id=net0,hostfwd=tcp::2222-:22 \
+  -device virtio-net-pci,netdev=net0
 ```
 
 ## Development
-
-### Prerequisites
-
-- [D compiler](https://dlang.org/download.html) (DMD, LDC, or GDC)
-- [DUB package manager](https://code.dlang.org/getting_started)
-- QEMU installed on your system
 
 ### Building from Source
 
@@ -155,46 +175,56 @@ qemu-system-x86_64 \
 git clone https://github.com/yourusername/qboot.git
 cd qboot
 
+# Install dependencies
+make deps
+
 # Build in debug mode
-dub build
+make build
 
 # Build optimized release
 make release
+
+# Cross-compile for multiple platforms
+make build-all
 ```
 
-### Running Tests
+### Available Make Targets
 
-QBoot includes a comprehensive test suite covering unit tests, integration tests, and edge cases:
+- `make build` - Build the binary
+- `make release` - Build optimized release binary
+- `make build-all` - Cross-compile for multiple platforms
+- `make test` - Run tests
+- `make test-coverage` - Run tests with coverage report
+- `make fmt` - Format code
+- `make vet` - Run go vet
+- `make lint` - Run golangci-lint (if available)
+- `make clean` - Clean build artifacts
+- `make install` - Install to /usr/local/bin
+- `make help` - Show all available targets
+
+### Running Tests
 
 ```bash
 # Run all tests
 make test
 
-# Verbose test output
-make test-verbose
+# Run tests with coverage
+make test-coverage
 
-# Run comprehensive test suite
-make test-runner
-
-# Performance testing
-make perf-test
-
-# Coverage analysis (if supported)
-make coverage
+# Run benchmarks
+make benchmark
 ```
 
 ### Code Quality
 
-```bash
-# Format code (requires dfmt)
-make format
+The project follows Go best practices:
 
-# Lint code (requires dscanner)
-make lint
-
-# Run all checks
-make check
-```
+- **gofmt** for consistent formatting
+- **go vet** for static analysis
+- **golangci-lint** for comprehensive linting
+- Comprehensive test coverage
+- Clear error messages
+- Proper interface design
 
 ## Contributing
 
@@ -203,7 +233,7 @@ We welcome contributions! Here's how to get started:
 ### Reporting Issues
 
 1. Check existing issues first
-2. Provide system information (OS, QEMU version, D compiler)
+2. Provide system information (OS, QEMU version, Go version)
 3. Include error messages and logs
 4. Provide steps to reproduce
 
@@ -211,7 +241,7 @@ We welcome contributions! Here's how to get started:
 
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature-name`
-3. Make your changes
+3. Make your changes following Go best practices
 4. Add tests for new functionality
 5. Ensure all tests pass: `make test`
 6. Update documentation if needed
@@ -219,18 +249,11 @@ We welcome contributions! Here's how to get started:
 
 ### Development Guidelines
 
-- **Code Style**: Follow D best practices and existing code style
+- **Code Style**: Follow standard Go conventions and `gofmt`
 - **Testing**: Add unit tests for new features and bug fixes
 - **Documentation**: Update README and inline docs for public APIs
-- **Compatibility**: Ensure compatibility with supported D compilers
-
-### Testing Guidelines
-
-- Write unit tests for individual functions
-- Add integration tests for complete workflows
-- Include edge case testing for error conditions
-- Use descriptive test names and comments
-- Clean up test artifacts (temp files, directories)
+- **Error Handling**: Use proper Go error handling patterns
+- **Interfaces**: Design clean, minimal interfaces
 
 ## System Requirements
 
@@ -243,23 +266,50 @@ We welcome contributions! Here's how to get started:
 
 ### Build Requirements
 
-- D compiler (DMD 2.100+, LDC 1.30+, or GDC 12+)
-- DUB package manager
-- Make (optional, for convenience targets)
+- Go 1.21 or later
+- Make (for build automation)
+- Git (for version information)
+
+## Differences from D Version
+
+The Go version offers several improvements over the original D implementation:
+
+### Performance
+- Faster startup time
+- Lower memory usage
+- Better resource management
+
+### Maintainability
+- Clear separation of concerns
+- Interface-based design
+- Comprehensive test coverage
+- Standard Go project structure
+
+### User Experience
+- Better error messages
+- Improved CLI with Cobra
+- Configuration validation
+- Version information
+
+### Development Experience
+- Standard Go tooling
+- Easy cross-compilation
+- Automated testing
+- Consistent formatting
 
 ## FAQ
 
-**Q: Why does QBoot require hugepages?**
-A: QBoot uses hugepages for better performance, but falls back gracefully if not available.
+**Q: How does this compare to the original D version?**
+A: The Go version provides the same functionality with better performance, maintainability, and user experience.
 
 **Q: Can I run multiple VMs simultaneously?**
 A: Yes, use different SSH ports: `qboot -d vm1.img --ssh-port 2222` and `qboot -d vm2.img --ssh-port 2223`
 
 **Q: How do I create a disk image?**
-A: Use `qemu-img create -f qcow2 disk.img 20G` to create a 20GB disk image.
+A: Use `qemu-img create -f qcow2 disk.img 20G` or `make create-test-disk` for a test image.
 
-**Q: What's the difference between snapshot and no-snapshot mode?**
-A: Snapshot mode discards all changes when the VM exits. No-snapshot mode saves changes permanently.
+**Q: What's the difference between snapshot and write mode?**
+A: Snapshot mode (default) discards all changes when the VM exits. Write mode saves changes permanently.
 
 ## License
 
@@ -268,23 +318,11 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 ## Acknowledgments
 
 - [QEMU](https://www.qemu.org/) - The amazing virtualization platform
-- [D Language](https://dlang.org/) - For making systems programming enjoyable
+- [Cobra](https://github.com/spf13/cobra) - Excellent CLI framework
+- [Viper](https://github.com/spf13/viper) - Configuration management
+- Original D language implementation by Andrea Manzini
 - Contributors and testers who help improve QBoot
 
-## Changelog
-
-### Version 1.0.0 (Current)
-
-- Initial release
-- Basic VM launching functionality
-- JSON configuration support
-- Comprehensive test suite
-- Interactive and headless modes
-- SSH port forwarding
-- Snapshot mode support
-
----
-
-**Happy virtualizing!** 🎉
+**Happy virtualizing with Go!** 🎉🐹
 
 If you find QBoot useful, please consider giving it a ⭐ on GitHub!

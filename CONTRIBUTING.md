@@ -1,6 +1,6 @@
 # Contributing to QBoot
 
-Thank you for your interest in contributing to QBoot! This guide will help you get started with contributing to the project.
+Thank you for your interest in contributing to QBoot! This guide will help you get started with contributing to our Go-based QEMU VM launcher.
 
 ## Table of Contents
 
@@ -23,6 +23,7 @@ This project adheres to a code of conduct. By participating, you are expected to
 - Welcome newcomers and help them learn
 - Focus on what is best for the community
 - Show empathy towards other community members
+- Follow the [Go Community Code of Conduct](https://golang.org/conduct)
 
 ## Getting Started
 
@@ -30,11 +31,11 @@ This project adheres to a code of conduct. By participating, you are expected to
 
 Before you begin, ensure you have:
 
-- [D compiler](https://dlang.org/download.html) (DMD 2.100+, LDC 1.30+, or GDC 12+)
-- [DUB package manager](https://code.dlang.org/getting_started)
+- [Go 1.21 or later](https://golang.org/doc/install)
 - Git for version control
-- QEMU installed for testing
-- Basic understanding of D programming language
+- Make (for build automation)
+- QEMU installed for testing (optional but recommended)
+- Basic understanding of Go programming language
 
 ### Fork and Clone
 
@@ -46,7 +47,7 @@ Before you begin, ensure you have:
    ```
 3. Add the upstream repository:
    ```bash
-   git remote add upstream https://github.com/ORIGINAL_OWNER/qboot.git
+   git remote add upstream https://github.com/ilmanzo/qboot.git
    ```
 
 ## Development Setup
@@ -54,15 +55,30 @@ Before you begin, ensure you have:
 ### Building QBoot
 
 ```bash
+# Install dependencies
+make deps
+
 # Debug build (default)
-dub build
-
-# Release build
-dub build --build=release
-
-# Or using Make
 make build
+
+# Release build (optimized)
 make release
+
+# Cross-compile for all platforms
+make build-all
+```
+
+### Project Structure
+
+```
+qboot/
+├── cmd/qboot/          # Main application entry point
+├── internal/config/    # Configuration management
+├── internal/vm/        # VM implementations and interfaces
+├── pkg/               # Public packages (if any)
+├── go.mod             # Go module definition
+├── Makefile           # Build automation
+└── *.md               # Documentation
 ```
 
 ### Running Tests
@@ -71,34 +87,32 @@ make release
 # Run all tests
 make test
 
-# Run tests with verbose output
-make test-verbose
+# Run tests with coverage
+make test-coverage
 
-# Run comprehensive test suite
-make test-runner
+# Run benchmarks
+make benchmark
 
-# Quick test run
-make quick-test
+# Run specific package tests
+go test -v ./internal/config
+go test -v ./internal/vm
 ```
 
 ### Development Tools
 
-Optional but recommended tools:
+Recommended tools for development:
 
 ```bash
-# Install code formatter
-dub fetch dfmt
-dub run dfmt
+# Install golangci-lint for comprehensive linting
+go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 
-# Install static analyzer
-dub fetch dscanner
-dub run dscanner
+# Install gofumpt for enhanced formatting
+go install mvdan.cc/gofumpt@latest
 
-# Format code
-make format
-
-# Lint code
-make lint
+# Use make targets for convenience
+make fmt     # Format code
+make vet     # Run go vet
+make lint    # Run golangci-lint
 ```
 
 ## Making Changes
@@ -110,6 +124,7 @@ make lint
 - `feature/description` - Feature branches
 - `bugfix/description` - Bug fix branches
 - `hotfix/description` - Critical fixes
+- `docs/description` - Documentation updates
 
 ### Creating a Feature Branch
 
@@ -121,26 +136,29 @@ git checkout -b feature/your-feature-name
 
 ### Commit Guidelines
 
-Write clear, concise commit messages:
+Write clear, concise commit messages following [Conventional Commits](https://www.conventionalcommits.org/):
 
 ```
-feat: add configuration validation for SSH ports
+feat(vm): add support for custom QEMU arguments
 
-- Add port range validation (1024-65535)
-- Include unit tests for boundary conditions
-- Update error messages for better UX
+- Allow users to specify additional QEMU arguments
+- Add validation for custom arguments
+- Include comprehensive tests for new functionality
+- Update documentation with examples
 
 Closes #123
 ```
 
 Commit message format:
-- `feat:` - New features
-- `fix:` - Bug fixes
-- `docs:` - Documentation changes
-- `test:` - Test additions/modifications
-- `refactor:` - Code refactoring
-- `perf:` - Performance improvements
-- `chore:` - Maintenance tasks
+- `feat(scope):` - New features
+- `fix(scope):` - Bug fixes
+- `docs(scope):` - Documentation changes
+- `test(scope):` - Test additions/modifications
+- `refactor(scope):` - Code refactoring
+- `perf(scope):` - Performance improvements
+- `chore(scope):` - Maintenance tasks
+
+Common scopes: `vm`, `config`, `cli`, `build`, `ci`
 
 ## Testing
 
@@ -150,173 +168,246 @@ QBoot uses several types of tests:
 
 1. **Unit Tests** - Test individual functions and methods
 2. **Integration Tests** - Test complete workflows
-3. **Edge Case Tests** - Test boundary conditions and error handling
-4. **Performance Tests** - Ensure performance requirements are met
+3. **Table-Driven Tests** - Test multiple scenarios systematically
+4. **Benchmark Tests** - Measure and track performance
 
 ### Writing Tests
 
 #### Unit Test Example
 
-```d
-unittest
-{
-    writeln("Running feature X tests...");
+```go
+func TestConfigValidation(t *testing.T) {
+    cfg := config.DefaultConfig()
     
-    // Setup
-    auto testData = createTestData();
+    // Test valid configuration
+    err := cfg.Validate()
+    if err != nil {
+        t.Errorf("Valid config should not return error, got: %v", err)
+    }
     
-    // Test
-    auto result = functionUnderTest(testData);
-    
-    // Assert
-    assert(result.isValid);
-    assert(result.value == expectedValue);
-    
-    // Cleanup
-    cleanup(testData);
-    
-    writeln("✓ Feature X tests passed");
+    // Test invalid CPU count
+    cfg.CPU = 0
+    err = cfg.Validate()
+    if err == nil {
+        t.Error("Invalid CPU count should return error")
+    }
 }
 ```
 
-#### Integration Test Example
+#### Table-Driven Test Example
 
-```d
-unittest
-{
-    writeln("🧪 Running integration test for workflow Y...");
+```go
+func TestVMCreation(t *testing.T) {
+    tests := []struct {
+        name    string
+        arch    string
+        wantErr bool
+    }{
+        {"valid x86_64", "x86_64", false},
+        {"valid aarch64", "aarch64", false},
+        {"invalid arch", "invalid", true},
+    }
     
-    // Create test environment
-    auto tempDir = createTempDir();
-    auto configFile = tempDir ~ "/config.json";
-    auto diskFile = tempDir ~ "/test.img";
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            vm, err := vm.CreateVM(tt.arch)
+            if (err != nil) != tt.wantErr {
+                t.Errorf("CreateVM() error = %v, wantErr %v", err, tt.wantErr)
+                return
+            }
+            if !tt.wantErr && vm == nil {
+                t.Error("CreateVM() should return valid VM for supported arch")
+            }
+        })
+    }
+}
+```
+
+#### Benchmark Test Example
+
+```go
+func BenchmarkConfigLoad(b *testing.B) {
+    tempFile := createTempConfigFile(b)
+    defer os.Remove(tempFile)
     
-    scope(exit) cleanupPath(tempDir);
-    
-    // Test complete workflow
-    createTestDisk(diskFile);
-    createTestConfig(configFile);
-    
-    auto vm = VirtualMachine();
-    vm.loadFromFile(configFile);
-    vm.diskPath = diskFile;
-    
-    // This should not throw
-    auto args = vm.buildArgs();
-    assert(args.length > 0);
-    
-    writeln("✓ Integration test passed");
+    b.ResetTimer()
+    for i := 0; i < b.N; i++ {
+        _, err := config.LoadConfig(tempFile)
+        if err != nil {
+            b.Fatal(err)
+        }
+    }
 }
 ```
 
 ### Test Guidelines
 
 - **Isolation**: Tests should not depend on each other
-- **Cleanup**: Always clean up resources (use `scope(exit)`)
-- **Descriptive Names**: Use clear, descriptive test names
+- **Cleanup**: Always clean up resources using `defer`
+- **Descriptive Names**: Use clear, descriptive test names and subtests
+- **Error Messages**: Provide helpful error messages in assertions
 - **Edge Cases**: Test boundary conditions and error cases
-- **Documentation**: Comment complex test logic
+- **Mock External Dependencies**: Avoid dependencies on external services
 - **Fast Execution**: Keep tests fast and focused
 
 ### Running Specific Tests
 
 ```bash
-# All tests
-dub test
+# Run all tests with verbose output
+go test -v ./...
 
-# Verbose output
-dub test --verbose
+# Run specific test function
+go test -run TestConfigValidation ./internal/config
 
-# Force rebuild and test
-dub test --force
+# Run tests with race detection
+go test -race ./...
 
-# Performance testing
-make perf-test
+# Run tests with coverage
+go test -cover ./...
+
+# Generate coverage report
+make test-coverage
 ```
 
 ## Code Style
 
-### D Language Guidelines
+### Go Guidelines
 
-Follow these D best practices:
+Follow these Go best practices and the [Go Code Review Comments](https://github.com/golang/go/wiki/CodeReviewComments):
 
 #### Naming Conventions
 
-```d
-// Functions and variables: camelCase
-void loadConfiguration();
-string configFile = "config.json";
+```go
+// Package names: lowercase, single word
+package config
+
+// Functions and variables: camelCase, start with lowercase for private
+func loadConfiguration() {}
+func LoadConfiguration() {} // exported
+var configFile = "config.json"
 
 // Types: PascalCase
-struct VirtualMachine { }
-class ConfigManager { }
+type VirtualMachine struct {}
+type ConfigManager interface {}
 
-// Constants: UPPER_CASE
-enum int MAX_CPU_COUNT = 32;
-const string DEFAULT_LOG_FILE = "console.log";
-
-// Private members: leading underscore
-private string _internalState;
+// Constants: camelCase or ALL_CAPS for exported constants
+const maxCPUCount = 32
+const DefaultLogFile = "qboot.log"
 ```
 
 #### Code Organization
 
-```d
-// Imports at the top
-import std.stdio;
-import std.json;
+```go
+// Imports grouped: standard library, third party, local
+import (
+    "fmt"
+    "os"
+    
+    "github.com/spf13/cobra"
+    "github.com/spf13/viper"
+    
+    "github.com/ilmanzo/qboot/internal/config"
+)
 
-// Public interface first
-public void publicFunction() { }
+// Interface definitions before implementations
+type VM interface {
+    Run() error
+    Configure(cfg *config.VMConfig)
+}
 
-// Private implementation after
-private void helperFunction() { }
+// Struct definitions
+type BaseVM struct {
+    DiskPath string
+    CPU      int
+}
 ```
 
 #### Error Handling
 
-```d
-// Use exceptions for error conditions
-if (diskPath.empty)
-{
-    throw new Exception("Disk path cannot be empty");
+```go
+// Return errors, don't panic
+func LoadConfig(path string) (*VMConfig, error) {
+    data, err := os.ReadFile(path)
+    if err != nil {
+        return nil, fmt.Errorf("failed to read config file: %w", err)
+    }
+    
+    // Process data...
+    return config, nil
 }
 
-// Provide meaningful error messages
-if (!diskPath.exists)
-{
-    throw new Exception(format("Disk image not found at '%s'", diskPath));
+// Provide context in error messages
+if vm.CPU < 1 || vm.CPU > 32 {
+    return fmt.Errorf("CPU count must be between 1 and 32, got %d", vm.CPU)
 }
 ```
 
 #### Documentation
 
-```d
-/**
- * Validates VM configuration parameters.
- * 
- * Params:
- *     vm = The virtual machine configuration to validate
- * 
- * Throws:
- *     Exception if any parameter is invalid
- */
-void validateVMConfig(const ref VirtualMachine vm)
-{
+```go
+// Package documentation
+// Package config provides configuration management for QBoot.
+package config
+
+// Function documentation with proper format
+// LoadConfig loads a VM configuration from the specified file.
+//
+// The file should contain valid JSON configuration. If the file
+// doesn't exist, an error is returned.
+func LoadConfig(path string) (*VMConfig, error) {
     // Implementation
+}
+
+// Struct documentation
+// VMConfig holds the configuration settings for a virtual machine.
+type VMConfig struct {
+    // Arch specifies the target architecture (x86_64, aarch64, etc.)
+    Arch string `json:"arch"`
+    
+    // CPU is the number of CPU cores to allocate
+    CPU int `json:"cpu"`
 }
 ```
 
-### Formatting
+### Formatting and Linting
 
-Use consistent formatting:
+Use the provided tools to maintain consistent code style:
 
 ```bash
-# Auto-format code
-make format
+# Format code
+make fmt
 
-# Or manually with dfmt
-find source/ -name "*.d" -exec dfmt -i {} \;
+# Run static analysis
+make vet
+
+# Run comprehensive linting
+make lint
+
+# Fix common issues automatically
+go mod tidy
+gofumpt -w .
+```
+
+### Interface Design
+
+Follow Go interface best practices:
+
+```go
+// Keep interfaces small and focused
+type Runner interface {
+    Run() error
+}
+
+// Accept interfaces, return structs
+func ProcessVM(runner Runner) error {
+    return runner.Run()
+}
+
+// Embed interfaces for composition
+type VM interface {
+    Runner
+    Configurer
+}
 ```
 
 ## Submitting Changes
@@ -326,11 +417,13 @@ find source/ -name "*.d" -exec dfmt -i {} \;
 Before submitting your changes:
 
 - [ ] All tests pass (`make test`)
-- [ ] Code is properly formatted (`make format`)
-- [ ] No lint warnings (`make lint`)
+- [ ] Code is properly formatted (`make fmt`)
+- [ ] No linting warnings (`make lint`)
+- [ ] Go modules are tidy (`go mod tidy`)
 - [ ] Documentation is updated
-- [ ] Commit messages are clear and descriptive
+- [ ] Commit messages follow conventions
 - [ ] Changes are rebased on latest main
+- [ ] Coverage hasn't significantly decreased
 
 ### Creating a Pull Request
 
@@ -341,31 +434,38 @@ Before submitting your changes:
 
 2. Create a pull request on GitHub with:
    - Clear title describing the change
-   - Detailed description of what was changed and why
+   - Detailed description using the template
    - Reference to related issues (`Fixes #123`)
    - Screenshots or examples if applicable
 
 3. Pull request template:
-   ```
+   ```markdown
    ## Description
-   Brief description of the changes.
+   Brief description of the changes and motivation.
    
    ## Type of Change
-   - [ ] Bug fix
-   - [ ] New feature
-   - [ ] Breaking change
+   - [ ] Bug fix (non-breaking change which fixes an issue)
+   - [ ] New feature (non-breaking change which adds functionality)
+   - [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
    - [ ] Documentation update
    
    ## Testing
    - [ ] Unit tests added/updated
    - [ ] Integration tests pass
    - [ ] Manual testing performed
+   - [ ] Benchmarks run (if performance-related)
    
    ## Checklist
-   - [ ] Code follows project style guidelines
+   - [ ] Code follows Go best practices
    - [ ] Self-review of code completed
-   - [ ] Documentation updated
-   - [ ] Tests pass locally
+   - [ ] Documentation updated (README, godoc comments)
+   - [ ] Tests pass locally (`make test`)
+   - [ ] Linting passes (`make lint`)
+   - [ ] No decrease in test coverage
+   
+   ## Related Issues
+   Fixes #123
+   Related to #456
    ```
 
 ## Issue Guidelines
@@ -374,21 +474,58 @@ Before submitting your changes:
 
 Include the following information:
 
-- **Environment**: OS, D compiler version, QEMU version
+- **Environment**: 
+  - OS and version
+  - Go version (`go version`)
+  - QEMU version (if applicable)
+  - QBoot version (`./qboot version`)
+
 - **Steps to Reproduce**: Clear, minimal reproduction steps
 - **Expected Behavior**: What should happen
 - **Actual Behavior**: What actually happened
-- **Error Messages**: Full error output
-- **Additional Context**: Logs, screenshots, configuration
+- **Error Messages**: Full error output with stack traces
+- **Configuration**: Relevant configuration files or CLI arguments
+- **Additional Context**: Logs, screenshots, related issues
+
+**Bug Report Template:**
+```markdown
+## Bug Description
+A clear description of what the bug is.
+
+## Environment
+- OS: Ubuntu 22.04
+- Go version: go1.21.0 linux/amd64
+- QBoot version: v1.2.3
+- QEMU version: 7.0.0
+
+## Steps to Reproduce
+1. Run `qboot -d test.img -c 4`
+2. See error
+
+## Expected Behavior
+VM should start with 4 CPU cores.
+
+## Actual Behavior
+Error: "invalid CPU configuration"
+
+## Error Output
+```
+[paste full error output]
+```
+
+## Additional Context
+Configuration file content, any relevant logs.
+```
 
 ### Requesting Features
 
 For new features:
 
-- **Use Case**: Why is this feature needed?
+- **Problem**: What problem does this solve?
 - **Proposed Solution**: How should it work?
 - **Alternatives**: What alternatives were considered?
-- **Additional Context**: Examples, mockups, references
+- **Use Cases**: Real-world scenarios where this would be useful
+- **Implementation Ideas**: Technical approach (optional)
 
 ### Issue Labels
 
@@ -399,39 +536,49 @@ Common labels used:
 - `documentation` - Documentation needs
 - `good first issue` - Good for newcomers
 - `help wanted` - Extra attention needed
-- `priority: high` - Critical issues
+- `priority: critical` - Security or data loss issues
+- `priority: high` - Important issues
+- `priority: normal` - Standard issues
 - `priority: low` - Nice to have
+- `area: cli` - Command line interface
+- `area: config` - Configuration system
+- `area: vm` - Virtual machine functionality
+- `area: build` - Build system and tooling
 
 ## Pull Request Process
 
 ### Review Process
 
-1. **Automated Checks**: CI/CD runs tests and checks
-2. **Code Review**: Maintainers review the code
-3. **Feedback**: Address any feedback or requested changes
-4. **Approval**: Maintainer approves the changes
-5. **Merge**: Changes are merged to main branch
+1. **Automated Checks**: CI/CD runs tests, linting, and builds
+2. **Initial Review**: Maintainers do an initial assessment
+3. **Detailed Review**: Code review focusing on quality and design
+4. **Feedback**: Address any feedback or requested changes
+5. **Approval**: Maintainer approves the changes
+6. **Merge**: Changes are merged to main branch
 
 ### Review Criteria
 
 Code reviews focus on:
 
 - **Correctness**: Does the code work as intended?
-- **Testing**: Are there adequate tests?
+- **Testing**: Are there adequate tests with good coverage?
 - **Performance**: Any performance implications?
 - **Security**: Are there security considerations?
 - **Maintainability**: Is the code easy to understand and maintain?
-- **Documentation**: Is the code properly documented?
+- **Go Idioms**: Does it follow Go best practices?
+- **Documentation**: Is the code and APIs properly documented?
+- **Breaking Changes**: Any impact on existing APIs?
 
 ### Addressing Feedback
 
 When receiving feedback:
 
-1. Read all comments carefully
-2. Ask questions if anything is unclear
-3. Make requested changes
-4. Push updates to your branch
-5. Respond to comments explaining your changes
+1. Read all comments carefully and ask for clarification if needed
+2. Make requested changes in separate commits for easy review
+3. Push updates to your branch (don't force push unless requested)
+4. Reply to comments explaining your changes
+5. Mark conversations as resolved when addressed
+6. Request re-review when ready
 
 ## Release Process
 
@@ -439,44 +586,96 @@ When receiving feedback:
 
 QBoot follows [Semantic Versioning](https://semver.org/):
 
-- `MAJOR.MINOR.PATCH`
-- Major: Breaking changes
-- Minor: New features (backward compatible)
-- Patch: Bug fixes (backward compatible)
+- `MAJOR.MINOR.PATCH` (e.g., `1.2.3`)
+- **Major**: Breaking changes or major new features
+- **Minor**: New features (backward compatible)
+- **Patch**: Bug fixes (backward compatible)
 
 ### Release Checklist
 
 For maintainers preparing releases:
 
-- [ ] All tests pass
+- [ ] All tests pass on all supported platforms
 - [ ] Documentation updated
-- [ ] CHANGELOG updated
+- [ ] CHANGELOG.md updated with release notes
 - [ ] Version bumped in appropriate files
+- [ ] Performance benchmarks reviewed
+- [ ] Security considerations reviewed
+- [ ] Cross-compilation tested
 - [ ] Release notes prepared
-- [ ] Tagged and released
+- [ ] Git tag created and pushed
+- [ ] GitHub release published
+- [ ] Binaries uploaded to release
 
 ## Getting Help
 
 ### Communication Channels
 
-- **GitHub Issues**: For bugs and feature requests
-- **GitHub Discussions**: For questions and general discussion
-- **Email**: For private communication with maintainers
+- **GitHub Issues**: For bugs, feature requests, and project discussions
+- **GitHub Discussions**: For questions, ideas, and community discussion
+- **Pull Request Comments**: For code-specific discussions
 
 ### Learning Resources
 
-- [D Language Tour](https://tour.dlang.org/)
-- [D Language Documentation](https://dlang.org/documentation.html)
-- [DUB Package Manager](https://code.dlang.org/)
-- [QEMU Documentation](https://www.qemu.org/docs/master/)
+- **Go**: 
+  - [Go Tour](https://tour.golang.org/)
+  - [Effective Go](https://golang.org/doc/effective_go.html)
+  - [Go Code Review Comments](https://github.com/golang/go/wiki/CodeReviewComments)
+- **Testing**: [Go Testing Package](https://pkg.go.dev/testing)
+- **QEMU**: [QEMU Documentation](https://www.qemu.org/docs/master/)
+- **Project**: README.md, GETTING_STARTED.md, and inline documentation
+
+### Mentorship
+
+New contributors are welcome! If you're new to:
+
+- **Go**: Check out the learning resources above
+- **Open Source**: Start with issues labeled `good first issue`
+- **QBoot**: Read the documentation and ask questions in discussions
 
 ## Recognition
 
-Contributors are recognized in:
+Contributors are recognized through:
 
 - GitHub contributors list
-- Release notes
-- CHANGELOG mentions
+- Release notes acknowledgments
+- CHANGELOG.md mentions
 - Special recognition for significant contributions
+- Maintainer status for long-term contributors
 
-Thank you for contributing to QBoot! Your efforts help make virtualization more accessible for everyone.
+## Development Environment
+
+### Recommended Setup
+
+```bash
+# Clone and setup
+git clone https://github.com/YOUR_USERNAME/qboot.git
+cd qboot
+
+# Install dependencies
+make deps
+
+# Verify setup
+make test
+go version
+```
+
+### IDE Configuration
+
+For VS Code, recommended extensions:
+- Go (official Go team extension)
+- Go Test Explorer
+- Better Comments
+- GitLens
+
+Example `.vscode/settings.json`:
+```json
+{
+    "go.lintTool": "golangci-lint",
+    "go.formatTool": "gofumpt",
+    "go.testFlags": ["-v"],
+    "go.coverOnSave": true
+}
+```
+
+Thank you for contributing to QBoot! Your efforts help make virtualization more accessible and enjoyable for everyone. 🚀

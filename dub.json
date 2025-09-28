@@ -1,7 +1,0 @@
-{
-  "authors": ["Andrea Manzini"],
-  "copyright": "Copyright © 2025, Andrea Manzini",
-  "description": "A QEMU helper to directly boot disk images",
-  "license": "Apache-2.0",
-  "name": "qboot"
-}
