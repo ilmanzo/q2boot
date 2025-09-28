@@ -63,14 +63,14 @@ func init() {
 
 	// Define command line flags
 	rootCmd.PersistentFlags().StringVarP(&diskPath, "disk", "d", "", "Path to the disk image (required)")
-	rootCmd.PersistentFlags().IntVarP(&cpu, "cpu", "c", 0, "Number of CPU cores")
-	rootCmd.PersistentFlags().IntVarP(&ram, "ram", "r", 0, "Amount of RAM in GB")
-	rootCmd.PersistentFlags().StringVarP(&arch, "arch", "a", "", "CPU architecture (x86_64, aarch64, ppc64le, s390x)")
-	rootCmd.PersistentFlags().Uint16VarP(&sshPort, "ssh-port", "p", 0, "Host port for SSH forwarding")
-	rootCmd.PersistentFlags().StringVarP(&logFile, "log-file", "l", "", "Path to the log file")
-	rootCmd.PersistentFlags().BoolVarP(&graphical, "graphical", "g", false, "Enable graphical console")
-	rootCmd.PersistentFlags().BoolVarP(&writeMode, "write-mode", "w", false, "Enable write mode (changes are saved to disk)")
-	rootCmd.PersistentFlags().BoolVar(&confirm, "confirm", false, "Show command and wait for keypress before starting")
+	rootCmd.PersistentFlags().IntVarP(&cpu, "cpu", "c", 0, "Number of CPU cores (default: 2)")
+	rootCmd.PersistentFlags().IntVarP(&ram, "ram", "r", 0, "Amount of RAM in GB (default: 2)")
+	rootCmd.PersistentFlags().StringVarP(&arch, "arch", "a", "", "CPU architecture (x86_64, aarch64, ppc64le, s390x) (default: x86_64)")
+	rootCmd.PersistentFlags().Uint16VarP(&sshPort, "ssh-port", "p", 0, "Host port for SSH forwarding (default: 2222)")
+	rootCmd.PersistentFlags().StringVarP(&logFile, "log-file", "l", "", "Path to the log file (default: qboot.log)")
+	rootCmd.PersistentFlags().BoolVarP(&graphical, "graphical", "g", false, "Enable graphical console (default: false)")
+	rootCmd.PersistentFlags().BoolVarP(&writeMode, "write-mode", "w", false, "Enable write mode (changes are saved to disk) (default: false)")
+	rootCmd.PersistentFlags().BoolVar(&confirm, "confirm", false, "Show command and wait for keypress before starting (default: false)")
 
 	// Mark required flags only for root command, not subcommands
 	rootCmd.MarkFlagRequired("disk")
