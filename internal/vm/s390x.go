@@ -98,11 +98,6 @@ func (vm *S390XVM) BuildArgs() []string {
 
 // Run executes the s390x VM
 func (vm *S390XVM) Run() error {
-	// Validate QEMU binary is available
-	if err := ValidateQEMUBinary(vm.QEMUBinary()); err != nil {
-		return err
-	}
-
 	if err := ValidateDiskPath(vm.DiskPath); err != nil {
 		return err
 	}

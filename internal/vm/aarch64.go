@@ -94,11 +94,6 @@ func (vm *AARCH64VM) BuildArgs() []string {
 
 // Run executes the aarch64 VM
 func (vm *AARCH64VM) Run() error {
-	// Validate QEMU binary is available
-	if err := ValidateQEMUBinary(vm.QEMUBinary()); err != nil {
-		return err
-	}
-
 	if err := ValidateDiskPath(vm.DiskPath); err != nil {
 		return err
 	}

@@ -214,15 +214,15 @@ func runQBoot(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("disk path is required (use -d or --disk)")
 	}
 
-	// Validate architecture support and QEMU binary availability
-	if err := vm.ValidateArchitectureSupport(cfg.Arch); err != nil {
-		return fmt.Errorf("architecture validation failed: %w", err)
-	}
-
 	// Create VM based on architecture
 	virtualMachine, err := vm.CreateVM(cfg.Arch)
 	if err != nil {
 		return fmt.Errorf("failed to create VM: %w", err)
+	}
+
+	// Validate QEMU binary availability using the VM's specific binary
+	if err := vm.ValidateQEMUBinary(virtualMachine.QEMUBinary()); err != nil {
+		return fmt.Errorf("QEMU validation failed: %w", err)
 	}
 
 	// Configure the VM

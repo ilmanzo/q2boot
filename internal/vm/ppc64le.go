@@ -87,11 +87,6 @@ func (vm *PPC64LEVM) BuildArgs() []string {
 
 // Run executes the ppc64le VM
 func (vm *PPC64LEVM) Run() error {
-	// Validate QEMU binary is available
-	if err := ValidateQEMUBinary(vm.QEMUBinary()); err != nil {
-		return err
-	}
-
 	if err := ValidateDiskPath(vm.DiskPath); err != nil {
 		return err
 	}

@@ -77,17 +77,11 @@ func GetMissingQEMUBinaries() []string {
 	return missing
 }
 
-// ValidateArchitectureSupport checks if the given architecture is supported and has QEMU installed
+// ValidateArchitectureSupport checks if the given architecture is supported
 func ValidateArchitectureSupport(arch string) error {
 	if !IsArchSupported(arch) {
 		return fmt.Errorf("unsupported architecture: %s. Supported architectures: %s",
 			arch, strings.Join(SupportedArchitectures(), ", "))
 	}
-
-	binary, err := GetQEMUBinaryForArch(arch)
-	if err != nil {
-		return err
-	}
-
-	return ValidateQEMUBinary(binary)
+	return nil
 }
