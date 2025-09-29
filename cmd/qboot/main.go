@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -52,6 +53,38 @@ var versionCmd = &cobra.Command{
 		fmt.Printf("Git commit: %s\n", commit)
 		fmt.Printf("Build time: %s\n", buildTime)
 		fmt.Printf("Supported architectures: %v\n", vm.SupportedArchitectures())
+
+		// Show QEMU binary availability
+		fmt.Println("\nQEMU Binary Availability:")
+		availability := vm.CheckAvailableQEMUBinaries()
+		for _, arch := range vm.SupportedArchitectures() {
+			status := "❌ Not Available"
+			if availability[arch] {
+				status = "✅ Available"
+			}
+			binary, _ := vm.GetQEMUBinaryForArch(arch)
+			fmt.Printf("  %s (%s): %s\n", arch, binary, status)
+		}
+
+		missing := vm.GetMissingQEMUBinaries()
+		if len(missing) > 0 {
+			fmt.Printf("\nTo install missing QEMU binaries:\n")
+			for _, arch := range missing {
+				binary, _ := vm.GetQEMUBinaryForArch(arch)
+				fmt.Printf("  %s (%s):\n", arch, binary)
+				instructions := vm.GetInstallationInstructions(binary)
+				// Indent each line of instructions
+				lines := strings.Split(instructions, "\n")
+				for _, line := range lines {
+					if line != "" {
+						fmt.Printf("    %s\n", line)
+					}
+				}
+				if len(missing) > 1 {
+					fmt.Println()
+				}
+			}
+		}
 	},
 }
 
@@ -179,6 +212,11 @@ func runQBoot(cmd *cobra.Command, args []string) error {
 	// Validate required parameters
 	if cfg.DiskPath == "" {
 		return fmt.Errorf("disk path is required (use -d or --disk)")
+	}
+
+	// Validate architecture support and QEMU binary availability
+	if err := vm.ValidateArchitectureSupport(cfg.Arch); err != nil {
+		return fmt.Errorf("architecture validation failed: %w", err)
 	}
 
 	// Create VM based on architecture

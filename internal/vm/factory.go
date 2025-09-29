@@ -2,6 +2,7 @@ package vm
 
 import (
 	"fmt"
+	"strings"
 )
 
 // CreateVM creates a VM instance based on the specified architecture
@@ -33,4 +34,60 @@ func IsArchSupported(arch string) bool {
 		}
 	}
 	return false
+}
+
+// GetQEMUBinaryForArch returns the QEMU binary name for the given architecture
+func GetQEMUBinaryForArch(arch string) (string, error) {
+	vm, err := CreateVM(arch)
+	if err != nil {
+		return "", err
+	}
+	return vm.QEMUBinary(), nil
+}
+
+// CheckAvailableQEMUBinaries checks which QEMU binaries are available on the system
+func CheckAvailableQEMUBinaries() map[string]bool {
+	availability := make(map[string]bool)
+
+	for _, arch := range SupportedArchitectures() {
+		binary, err := GetQEMUBinaryForArch(arch)
+		if err != nil {
+			availability[arch] = false
+			continue
+		}
+
+		err = ValidateQEMUBinary(binary)
+		availability[arch] = (err == nil)
+	}
+
+	return availability
+}
+
+// GetMissingQEMUBinaries returns a list of architectures that are missing their QEMU binaries
+func GetMissingQEMUBinaries() []string {
+	var missing []string
+	availability := CheckAvailableQEMUBinaries()
+
+	for arch, available := range availability {
+		if !available {
+			missing = append(missing, arch)
+		}
+	}
+
+	return missing
+}
+
+// ValidateArchitectureSupport checks if the given architecture is supported and has QEMU installed
+func ValidateArchitectureSupport(arch string) error {
+	if !IsArchSupported(arch) {
+		return fmt.Errorf("unsupported architecture: %s. Supported architectures: %s",
+			arch, strings.Join(SupportedArchitectures(), ", "))
+	}
+
+	binary, err := GetQEMUBinaryForArch(arch)
+	if err != nil {
+		return err
+	}
+
+	return ValidateQEMUBinary(binary)
 }

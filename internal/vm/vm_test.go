@@ -1,8 +1,10 @@
 package vm
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/ilmanzo/qboot/internal/config"
@@ -367,5 +369,250 @@ func TestS390XVM(t *testing.T) {
 	expectedArgs := []string{"-machine", "s390-ccw-virtio", "-cpu", "max"}
 	if len(archArgs) != len(expectedArgs) {
 		t.Errorf("Expected %d arch args, got %d", len(expectedArgs), len(archArgs))
+	}
+}
+
+func TestValidateQEMUBinary(t *testing.T) {
+	tests := []struct {
+		name    string
+		binary  string
+		wantErr bool
+	}{
+		{
+			name:    "non-existent binary",
+			binary:  "qemu-system-nonexistent",
+			wantErr: true,
+		},
+		{
+			name:    "empty binary name",
+			binary:  "",
+			wantErr: true,
+		},
+		{
+			name:    "common system binary that should exist",
+			binary:  "ls", // This should exist on most Unix-like systems
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateQEMUBinary(tt.binary)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateQEMUBinary() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestGetQEMUBinaryForArch(t *testing.T) {
+	tests := []struct {
+		name        string
+		arch        string
+		expectedBin string
+		wantErr     bool
+	}{
+		{
+			name:        "x86_64 binary",
+			arch:        "x86_64",
+			expectedBin: "qemu-system-x86_64",
+			wantErr:     false,
+		},
+		{
+			name:        "aarch64 binary",
+			arch:        "aarch64",
+			expectedBin: "qemu-system-aarch64",
+			wantErr:     false,
+		},
+		{
+			name:        "ppc64le binary",
+			arch:        "ppc64le",
+			expectedBin: "qemu-system-ppc64",
+			wantErr:     false,
+		},
+		{
+			name:        "s390x binary",
+			arch:        "s390x",
+			expectedBin: "qemu-system-s390x",
+			wantErr:     false,
+		},
+		{
+			name:    "unsupported architecture",
+			arch:    "unsupported",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			binary, err := GetQEMUBinaryForArch(tt.arch)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GetQEMUBinaryForArch() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !tt.wantErr && binary != tt.expectedBin {
+				t.Errorf("GetQEMUBinaryForArch() = %v, want %v", binary, tt.expectedBin)
+			}
+		})
+	}
+}
+
+func TestCheckAvailableQEMUBinaries(t *testing.T) {
+	availability := CheckAvailableQEMUBinaries()
+
+	// Check that we get results for all supported architectures
+	supportedArchs := SupportedArchitectures()
+	if len(availability) != len(supportedArchs) {
+		t.Errorf("Expected availability check for %d architectures, got %d", len(supportedArchs), len(availability))
+	}
+
+	for _, arch := range supportedArchs {
+		if _, exists := availability[arch]; !exists {
+			t.Errorf("No availability check result for architecture %s", arch)
+		}
+	}
+}
+
+func TestGetMissingQEMUBinaries(t *testing.T) {
+	missing := GetMissingQEMUBinaries()
+
+	// We can't guarantee what will be missing on the test system,
+	// but we can verify it returns a valid list
+	supportedArchs := SupportedArchitectures()
+
+	// All missing architectures should be valid/supported architectures
+	for _, arch := range missing {
+		found := false
+		for _, supported := range supportedArchs {
+			if arch == supported {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("GetMissingQEMUBinaries() returned unsupported architecture: %s", arch)
+		}
+	}
+}
+
+func TestValidateArchitectureSupport(t *testing.T) {
+	tests := []struct {
+		name    string
+		arch    string
+		wantErr bool
+	}{
+		{
+			name:    "unsupported architecture",
+			arch:    "unsupported",
+			wantErr: true,
+		},
+		{
+			name:    "empty architecture",
+			arch:    "",
+			wantErr: true,
+		},
+	}
+
+	// Test with all supported architectures - these may or may not have errors
+	// depending on whether QEMU is installed on the test system
+	for _, arch := range SupportedArchitectures() {
+		tests = append(tests, struct {
+			name    string
+			arch    string
+			wantErr bool
+		}{
+			name: fmt.Sprintf("supported architecture %s", arch),
+			arch: arch,
+			// Don't specify wantErr since it depends on system setup
+		})
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateArchitectureSupport(tt.arch)
+
+			// For unsupported/empty architectures, we definitely expect an error
+			if tt.arch == "unsupported" || tt.arch == "" {
+				if err == nil {
+					t.Errorf("ValidateArchitectureSupport() should return error for %s", tt.arch)
+				}
+			}
+			// For supported architectures, we just check that the function doesn't panic
+			// The result depends on whether QEMU binaries are installed
+		})
+	}
+}
+
+func TestGetInstallationInstructions(t *testing.T) {
+	tests := []struct {
+		name     string
+		binary   string
+		contains []string
+	}{
+		{
+			name:   "x86_64 instructions",
+			binary: "qemu-system-x86_64",
+			contains: []string{
+				"qemu-system-x86",
+				"qemu-x86",
+				"qemu-system-x86",
+			},
+		},
+		{
+			name:   "aarch64 instructions",
+			binary: "qemu-system-aarch64",
+			contains: []string{
+				"qemu-system-arm",
+				"qemu-arm",
+				"qemu-system-aarch64",
+			},
+		},
+		{
+			name:   "ppc64le instructions",
+			binary: "qemu-system-ppc64",
+			contains: []string{
+				"qemu-system-ppc",
+				"qemu-ppc",
+				"qemu-system-ppc64",
+			},
+		},
+		{
+			name:   "s390x instructions",
+			binary: "qemu-system-s390x",
+			contains: []string{
+				"qemu-system-s390x",
+				"qemu-s390x",
+				"qemu-system-s390x",
+			},
+		},
+		{
+			name:   "unknown binary",
+			binary: "qemu-system-unknown",
+			contains: []string{
+				"qemu-system",
+				"qemu-unknown",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			instructions := GetInstallationInstructions(tt.binary)
+
+			// Check that instructions contain expected package names
+			for _, expected := range tt.contains {
+				if !strings.Contains(instructions, expected) {
+					t.Errorf("GetInstallationInstructions() = %v, should contain %v", instructions, expected)
+				}
+			}
+
+			// Check that all major distros are mentioned
+			distros := []string{"Ubuntu/Debian", "RHEL/CentOS/Fedora", "SUSE/openSUSE", "Arch Linux", "macOS"}
+			for _, distro := range distros {
+				if !strings.Contains(instructions, distro) {
+					t.Errorf("GetInstallationInstructions() should contain %s instructions", distro)
+				}
+			}
+		})
 	}
 }

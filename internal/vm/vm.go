@@ -83,6 +83,41 @@ func (v *BaseVM) SetDiskPath(path string) {
 	v.DiskPath = path
 }
 
+// GetInstallationInstructions returns architecture-specific installation instructions for a QEMU binary
+func GetInstallationInstructions(binary string) string {
+	var ubuntuPkg, suseArch, archPkg string
+
+	switch binary {
+	case "qemu-system-x86_64":
+		ubuntuPkg, suseArch, archPkg = "qemu-system-x86", "x86", "x86"
+	case "qemu-system-aarch64":
+		ubuntuPkg, suseArch, archPkg = "qemu-system-arm", "arm", "aarch64"
+	case "qemu-system-ppc64":
+		ubuntuPkg, suseArch, archPkg = "qemu-system-ppc", "ppc", "ppc64"
+	case "qemu-system-s390x":
+		ubuntuPkg, suseArch, archPkg = "qemu-system-s390x", "s390x", "s390x"
+	default:
+		ubuntuPkg, suseArch, archPkg = "qemu-system", "unknown", "unknown"
+	}
+
+	return fmt.Sprintf("Please install the appropriate QEMU package for your system:\n"+
+		"  - Ubuntu/Debian: sudo apt install %s\n"+
+		"  - RHEL/CentOS/Fedora: sudo dnf install qemu-system or sudo yum install qemu-system\n"+
+		"  - SUSE/openSUSE: sudo zypper install qemu-%s\n"+
+		"  - Arch Linux: sudo pacman -S qemu-system-%s\n"+
+		"  - macOS: brew install qemu", ubuntuPkg, suseArch, archPkg)
+}
+
+// ValidateQEMUBinary checks if the specified QEMU binary is installed and available
+func ValidateQEMUBinary(binary string) error {
+	_, err := exec.LookPath(binary)
+	if err != nil {
+		instructions := GetInstallationInstructions(binary)
+		return fmt.Errorf("QEMU binary '%s' not found in PATH. %s\nError: %v", binary, instructions, err)
+	}
+	return nil
+}
+
 // ValidateDiskPath validates the disk path and returns an error if it's invalid
 func ValidateDiskPath(diskPath string) error {
 	if diskPath == "" {
@@ -106,8 +141,8 @@ func ValidateVMConfig(vm *BaseVM) error {
 		return fmt.Errorf("RAM must be between 1 and 128 GB, got %d", vm.RAM)
 	}
 
-	if vm.SSHPort < 1024 || vm.SSHPort > 65535 {
-		return fmt.Errorf("SSH port must be between 1024 and 65535, got %d", vm.SSHPort)
+	if vm.SSHPort < 1024 {
+		return fmt.Errorf("SSH port must be >= 1024, got %d", vm.SSHPort)
 	}
 
 	return nil

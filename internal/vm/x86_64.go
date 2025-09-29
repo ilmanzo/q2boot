@@ -87,6 +87,11 @@ func (vm *X86_64VM) BuildArgs() []string {
 
 // Run executes the x86_64 VM
 func (vm *X86_64VM) Run() error {
+	// Validate QEMU binary is available
+	if err := ValidateQEMUBinary(vm.QEMUBinary()); err != nil {
+		return err
+	}
+
 	if err := ValidateDiskPath(vm.DiskPath); err != nil {
 		return err
 	}
