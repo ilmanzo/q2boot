@@ -18,4 +18,5 @@ console.log
 qboot-test-library
 test-disk.img
 coverage.*
+qboot
 build/
