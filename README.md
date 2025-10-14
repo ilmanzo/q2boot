@@ -23,7 +23,10 @@ QBoot is a command-line tool that wraps QEMU to provide a streamlined experience
 
 ## Examples
 
+Booting a s390x image (very slow!)
 ![booting a s390x qcow2](s390x.gif)
+
+Booting a ppc64le image
 ![booting a ppc64le qcow2](ppc64le.gif)
 
 ## Installation
