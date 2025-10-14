@@ -2,6 +2,8 @@
 
 A handy QEMU VM launcher rewritten in idiomatic, concise, and modern Go. This is a complete rewrite of the original D language version, providing the same functionality with improved performance and maintainability.
 
+![logo](qboot_logo.png)
+
 ## Overview
 
 QBoot is a command-line tool that wraps QEMU to provide a streamlined experience for launching virtual machines. It automatically configures common settings like KVM acceleration, virtio drivers, and networking while allowing customization through both configuration files and command-line options.
