@@ -19,8 +19,9 @@ QBoot is a command-line tool that wraps QEMU to provide a streamlined experience
 - **Modern CLI**: Built with Cobra for excellent user experience
 - **Cross-platform**: Compiles to native binaries for multiple platforms
 
-## Example
+## Examples
 
+![booting a s390x qcow2](s390x.gif)
 ![booting a ppc64le qcow2](ppc64le.gif)
 
 ## Installation
