@@ -1,6 +1,7 @@
-# QBoot - Go Version 🚀
+# Q2Boot - Go go go Version 🚀
 
-A handy QEMU VM launcher rewritten in idiomatic, concise, and modern Go. This is a complete rewrite of the original D language version, providing the same functionality with improved performance and maintainability.
+QEMU Quick Boot is an handy QEMU VM launcher rewritten in idiomatic, concise, and modern Go. 
+This is a complete rewrite (hence the v2) of the original D language version, providing the same functionality with improved performance and maintainability.
 
 ![logo](qboot_logo.jpg)
 
