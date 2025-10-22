@@ -2,7 +2,7 @@
 
 A handy QEMU VM launcher rewritten in idiomatic, concise, and modern Go. This is a complete rewrite of the original D language version, providing the same functionality with improved performance and maintainability.
 
-![logo](qboot_logo.png)
+![logo](qboot_logo.jpg)
 
 ## Overview
 
