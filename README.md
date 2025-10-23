@@ -48,7 +48,7 @@ make install
 
 ### Pre-built Binaries
 
-Download pre-built binaries from the [releases page](https://github.com/yourusername/qboot/releases).
+Download pre-built binaries from the [releases page](https://github.com/ilmanzo/qboot/releases).
 
 ## Quick Start
 
