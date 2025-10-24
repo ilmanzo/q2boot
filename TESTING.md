@@ -1,10 +1,10 @@
-# Testing Documentation for QBoot
+# Testing Documentation for Q2Boot
 
-This document describes the comprehensive testing strategy and suite for QBoot, a QEMU VM launcher written in Go.
+This document describes the comprehensive testing strategy and suite for Q2Boot, a QEMU VM launcher written in Go.
 
 ## Overview
 
-QBoot includes a robust testing framework that covers:
+Q2Boot includes a robust testing framework that covers:
 
 - **Unit Tests**: Individual function and method testing
 - **Integration Tests**: Full workflow testing
@@ -83,7 +83,7 @@ go test -v ./internal/vm
 ## Test Files Structure
 
 ```
-qboot/
+q2boot/
 ├── internal/config/
 │   ├── config.go
 │   └── config_test.go      # Configuration tests
@@ -95,7 +95,7 @@ qboot/
 │   ├── ppc64le.go
 │   ├── s390x.go
 │   └── vm_test.go          # VM and architecture tests
-└── cmd/qboot/
+└── cmd/q2boot/
     └── main.go             # CLI entry point (integration tests planned)
 ```
 
@@ -198,7 +198,7 @@ go test -v -run TestValidate ./internal/config
 ### Temporary File Management
 ```go
 func TestLoadAndSaveConfig(t *testing.T) {
-    tempDir, err := os.MkdirTemp("", "qboot-test")
+    tempDir, err := os.MkdirTemp("", "q2boot-test")
     if err != nil {
         t.Fatalf("Failed to create temp dir: %v", err)
     }
@@ -348,7 +348,7 @@ func TestVMRun(t *testing.T) {
 ### Test Environment Setup
 ```go
 func setupTestEnv(t *testing.T) (string, func()) {
-    tmpDir, err := os.MkdirTemp("", "qboot-test")
+    tmpDir, err := os.MkdirTemp("", "q2boot-test")
     if err != nil {
         t.Fatalf("Failed to create test dir: %v", err)
     }

@@ -9,8 +9,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/ilmanzo/qboot/internal/config"
-	"github.com/ilmanzo/qboot/internal/vm"
+	"github.com/ilmanzo/q2boot/internal/config"
+	"github.com/ilmanzo/q2boot/internal/vm"
 )
 
 var (
@@ -35,21 +35,21 @@ var (
 )
 
 var rootCmd = &cobra.Command{
-	Use:     "qboot",
+	Use:     "q2boot",
 	Version: version,
 	Short:   "A handy QEMU VM launcher",
-	Long: `QBoot is a command-line tool that wraps QEMU to provide a streamlined
+	Long: `Q2Boot is a command-line tool that wraps QEMU to provide a streamlined
 experience for launching virtual machines. It automatically configures common
 settings like KVM acceleration, virtio drivers, and networking while allowing
 customization through both configuration files and command-line options.`,
-	RunE: runQBoot,
+	RunE: runQ2Boot,
 }
 
 var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print version information",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("QBoot %s\n", version)
+		fmt.Printf("Q2Boot %s\n", version)
 		fmt.Printf("Git commit: %s\n", commit)
 		fmt.Printf("Build time: %s\n", buildTime)
 		fmt.Printf("Supported architectures: %v\n", vm.SupportedArchitectures())
@@ -100,7 +100,7 @@ func init() {
 	rootCmd.PersistentFlags().IntVarP(&ram, "ram", "r", 0, "Amount of RAM in GB (default: 2)")
 	rootCmd.PersistentFlags().StringVarP(&arch, "arch", "a", "", "CPU architecture (x86_64, aarch64, ppc64le, s390x) (default: x86_64)")
 	rootCmd.PersistentFlags().Uint16VarP(&sshPort, "ssh-port", "p", 0, "Host port for SSH forwarding (default: 2222)")
-	rootCmd.PersistentFlags().StringVarP(&logFile, "log-file", "l", "", "Path to the log file (default: qboot.log)")
+	rootCmd.PersistentFlags().StringVarP(&logFile, "log-file", "l", "", "Path to the log file (default: q2boot.log)")
 	rootCmd.PersistentFlags().BoolVarP(&graphical, "graphical", "g", false, "Enable graphical console (default: false)")
 	rootCmd.PersistentFlags().BoolVarP(&writeMode, "write-mode", "w", false, "Enable write mode (changes are saved to disk) (default: false)")
 	rootCmd.PersistentFlags().BoolVar(&confirm, "confirm", false, "Show command and wait for keypress before starting (default: false)")
@@ -129,7 +129,7 @@ func initConfig() {
 	}
 
 	// Set up configuration paths
-	configDir := filepath.Join(home, ".config", "qboot")
+	configDir := filepath.Join(home, ".config", "q2boot")
 	configFile := filepath.Join(configDir, "config")
 
 	// Create config directory if it doesn't exist
@@ -148,7 +148,7 @@ func initConfig() {
 	viper.SetDefault("cpu", 2)
 	viper.SetDefault("ram_gb", 2)
 	viper.SetDefault("ssh_port", 2222)
-	viper.SetDefault("log_file", "qboot.log")
+	viper.SetDefault("log_file", "q2boot.log")
 	viper.SetDefault("graphical", false)
 	viper.SetDefault("write_mode", false)
 	viper.SetDefault("confirm", false)
@@ -174,7 +174,7 @@ func initConfig() {
 	}
 }
 
-func runQBoot(cmd *cobra.Command, args []string) error {
+func runQ2Boot(cmd *cobra.Command, args []string) error {
 	// Override config with command line flags if provided
 	if diskPath != "" {
 		cfg.DiskPath = diskPath

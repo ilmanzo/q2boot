@@ -3,7 +3,7 @@ package vm
 import (
 	"fmt"
 
-	"github.com/ilmanzo/qboot/internal/config"
+	"github.com/ilmanzo/q2boot/internal/config"
 )
 
 // PPC64LEVM implements VM for ppc64le architecture

@@ -1,4 +1,4 @@
-module github.com/ilmanzo/qboot
+module github.com/ilmanzo/q2boot
 
 go 1.21
 

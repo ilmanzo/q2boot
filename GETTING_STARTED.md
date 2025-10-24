@@ -1,6 +1,6 @@
-# Getting Started with QBoot
+# Getting Started with Q2Boot
 
-This guide will help you get up and running with QBoot in just a few minutes.
+This guide will help you get up and running with Q2Boot in just a few minutes.
 
 ## Prerequisites
 
@@ -15,14 +15,14 @@ Before you start, make sure you have:
 
 ```bash
 # Clone the repository
-git clone https://github.com/ilmanzo/qboot.git
-cd qboot
+git clone https://github.com/ilmanzo/q2boot.git
+cd q2boot
 
 # Build the project
 make build
 
-# The binary will be available at build/qboot
-./build/qboot --help
+# The binary will be available at build/q2boot
+./build/q2boot --help
 ```
 
 ### Option 2: Install System-wide
@@ -31,8 +31,8 @@ make build
 # After building
 make install
 
-# Now you can use qboot from anywhere
-qboot --version
+# Now you can use q2boot from anywhere
+q2boot --version
 ```
 
 ## Your First VM
@@ -53,16 +53,16 @@ qemu-img create -f qcow2 my-disk.img 20G
 
 ```bash
 # Basic launch (headless mode)
-qboot -d my-disk.img
+q2boot -d my-disk.img
 
 # With more resources
-qboot -d my-disk.img -c 4 -r 8
+q2boot -d my-disk.img -c 4 -r 8
 
 # With graphical interface
-qboot -d my-disk.img -g
+q2boot -d my-disk.img -g
 
 # See the command before running
-qboot -d my-disk.img --confirm
+q2boot -d my-disk.img --confirm
 ```
 
 ## Common Usage Patterns
@@ -71,7 +71,7 @@ qboot -d my-disk.img --confirm
 
 ```bash
 # Launch a development VM with generous resources
-qboot -d ubuntu-dev.img \
+q2boot -d ubuntu-dev.img \
   --cpu 4 \
   --ram 8 \
   --graphical \
@@ -86,19 +86,19 @@ ssh -p 2222 user@localhost
 
 ```bash
 # Quick test VM (changes are discarded)
-qboot -d test-image.img
+q2boot -d test-image.img
 
 # Multiple test VMs on different ports
-qboot -d test1.img --ssh-port 2222 &
-qboot -d test2.img --ssh-port 2223 &
-qboot -d test3.img --ssh-port 2224 &
+q2boot -d test1.img --ssh-port 2222 &
+q2boot -d test2.img --ssh-port 2223 &
+q2boot -d test3.img --ssh-port 2224 &
 ```
 
 ### Production/Server Use
 
 ```bash
 # Headless server with persistent changes
-qboot -d server.img \
+q2boot -d server.img \
   --write-mode \
   --cpu 2 \
   --ram 4 \
@@ -115,26 +115,26 @@ tail -f server.log
 
 ```bash
 # Boot ARM64 VM (requires aarch64 QEMU and firmware)
-qboot -d arm64-image.img --arch aarch64
+q2boot -d arm64-image.img --arch aarch64
 ```
 
 ### PowerPC
 
 ```bash
 # Boot PowerPC VM
-qboot -d ppc-image.img --arch ppc64le
+q2boot -d ppc-image.img --arch ppc64le
 ```
 
 ### IBM Z (s390x)
 
 ```bash
 # Boot s390x VM
-qboot -d s390x-image.img --arch s390x
+q2boot -d s390x-image.img --arch s390x
 ```
 
 ## Configuration File
 
-QBoot automatically creates a config file at `~/.config/qboot/config.json`:
+Q2Boot automatically creates a config file at `~/.config/q2boot/config.json`:
 
 ```json
 {
@@ -142,7 +142,7 @@ QBoot automatically creates a config file at `~/.config/qboot/config.json`:
   "cpu": 2,
   "ram_gb": 2,
   "ssh_port": 2222,
-  "log_file": "qboot.log",
+  "log_file": "q2boot.log",
   "write_mode": false,
   "graphical": false,
   "confirm": false
@@ -156,34 +156,34 @@ You can edit this file to change defaults, or override with command-line flags.
 ### Getting Help
 
 ```bash
-qboot --help                 # Main help
-qboot version               # Version information
-qboot completion bash       # Shell completion
+q2boot --help                 # Main help
+q2boot version               # Version information
+q2boot completion bash       # Shell completion
 ```
 
 ### VM Management
 
 ```bash
 # Basic operations
-qboot -d disk.img                    # Boot VM
-qboot -d disk.img -g                 # Boot with GUI
-qboot -d disk.img -w                 # Boot with persistent changes
-qboot -d disk.img --confirm          # Show command first
+q2boot -d disk.img                    # Boot VM
+q2boot -d disk.img -g                 # Boot with GUI
+q2boot -d disk.img -w                 # Boot with persistent changes
+q2boot -d disk.img --confirm          # Show command first
 
 # Resource configuration
-qboot -d disk.img -c 4               # 4 CPU cores
-qboot -d disk.img -r 8               # 8GB RAM
-qboot -d disk.img -c 4 -r 8          # Both
+q2boot -d disk.img -c 4               # 4 CPU cores
+q2boot -d disk.img -r 8               # 8GB RAM
+q2boot -d disk.img -c 4 -r 8          # Both
 
 # Network configuration
-qboot -d disk.img -p 2223            # Custom SSH port
-qboot -d disk.img -l custom.log      # Custom log file
+q2boot -d disk.img -p 2223            # Custom SSH port
+q2boot -d disk.img -l custom.log      # Custom log file
 
 # Architecture selection
-qboot -d disk.img -a x86_64          # x86_64 (default)
-qboot -d disk.img -a aarch64         # ARM64
-qboot -d disk.img -a ppc64le         # PowerPC
-qboot -d disk.img -a s390x           # IBM Z
+q2boot -d disk.img -a x86_64          # x86_64 (default)
+q2boot -d disk.img -a aarch64         # ARM64
+q2boot -d disk.img -a ppc64le         # PowerPC
+q2boot -d disk.img -a s390x           # IBM Z
 ```
 
 ### Building and Development
@@ -244,20 +244,20 @@ qemu-system-x86_64: -netdev user,id=net0,hostfwd=tcp::2222-:22: Could not set up
 
 **Solution**: Use a different SSH port:
 ```bash
-qboot -d disk.img --ssh-port 2223
+q2boot -d disk.img --ssh-port 2223
 ```
 
 ### Getting Debug Information
 
 ```bash
 # Show the exact QEMU command
-qboot -d disk.img --confirm
+q2boot -d disk.img --confirm
 
 # Check configuration
-cat ~/.config/qboot/config.json
+cat ~/.config/q2boot/config.json
 
 # Validate your setup
-qboot version
+q2boot version
 qemu-system-x86_64 --version
 ```
 
@@ -267,7 +267,7 @@ Once you're comfortable with the basics:
 
 1. **Explore Architecture Support**: Try different architectures
 2. **Customize Configuration**: Modify the config file for your needs  
-3. **Automation**: Use QBoot in scripts for automated testing
+3. **Automation**: Use Q2Boot in scripts for automated testing
 4. **Integration**: Integrate with your development workflow
 5. **Contributing**: Check out the source code and contribute improvements
 

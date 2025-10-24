@@ -3,7 +3,7 @@ package vm
 import (
 	"fmt"
 
-	"github.com/ilmanzo/qboot/internal/config"
+	"github.com/ilmanzo/q2boot/internal/config"
 )
 
 // X86_64VM implements VM for x86_64 architecture

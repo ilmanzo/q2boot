@@ -15,8 +15,8 @@ __dummy.html
 docs/
 
 console.log
-qboot-test-library
+q2boot-test-library
 test-disk.img
 coverage.*
-qboot
+q2boot
 build/

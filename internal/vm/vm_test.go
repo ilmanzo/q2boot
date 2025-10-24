@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ilmanzo/qboot/internal/config"
+	"github.com/ilmanzo/q2boot/internal/config"
 )
 
 func TestNewBaseVM(t *testing.T) {
@@ -25,8 +25,8 @@ func TestNewBaseVM(t *testing.T) {
 		t.Errorf("Expected SSHPort to be 2222, got %d", vm.SSHPort)
 	}
 
-	if vm.LogFile != "qboot.log" {
-		t.Errorf("Expected LogFile to be qboot.log, got %s", vm.LogFile)
+	if vm.LogFile != "q2boot.log" {
+		t.Errorf("Expected LogFile to be q2boot.log, got %s", vm.LogFile)
 	}
 
 	if vm.Graphical != false {
@@ -121,7 +121,7 @@ func TestValidateDiskPath(t *testing.T) {
 
 func TestValidateDiskPathWithRealFile(t *testing.T) {
 	// Create a temporary file for testing
-	tempDir, err := os.MkdirTemp("", "qboot-test")
+	tempDir, err := os.MkdirTemp("", "q2boot-test")
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}

@@ -6,7 +6,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/ilmanzo/qboot/internal/config"
+	"github.com/ilmanzo/q2boot/internal/config"
 )
 
 // VM interface defines the methods that all VM implementations must provide
@@ -57,7 +57,7 @@ func NewBaseVM() *BaseVM {
 		CPU:        2,
 		RAM:        2,
 		SSHPort:    2222,
-		LogFile:    "qboot.log",
+		LogFile:    "q2boot.log",
 		Graphical:  false,
 		NoSnapshot: false,
 		Confirm:    false,

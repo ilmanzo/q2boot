@@ -3,7 +3,7 @@
 QEMU Quick Boot is an handy QEMU VM launcher rewritten in idiomatic, concise, and modern Go. 
 This is a complete rewrite (hence the v2) of the original D language version, providing the same functionality with improved performance and maintainability.
 
-![logo](qboot_logo.jpg)
+![logo](q2boot_logo.jpg)
 
 ## Overview
 
@@ -12,7 +12,7 @@ Q2Boot is a command-line tool that wraps QEMU to provide a streamlined experienc
 ## Features
 
 - **Zero-config startup**: Works out of the box with sensible defaults
-- **JSON configuration**: Persistent settings via `~/.config/qboot/config.json`
+- **JSON configuration**: Persistent settings via `~/.config/q2boot/config.json`
 - **Graphical and headless modes**: GUI or console-only operation
 - **Snapshot support**: Choose whether to persist changes
 - **Multi-architecture support**: Works with x86_64, aarch64, ppc64le, and s390x
@@ -48,7 +48,7 @@ make install
 
 ### Pre-built Binaries
 
-Download pre-built binaries from the [releases page](https://github.com/ilmanzo/qboot/releases).
+Download pre-built binaries from the [releases page](https://github.com/ilmanzo/q2boot/releases).
 
 ## Quick Start
 
@@ -82,14 +82,14 @@ q2boot -d disk.img --confirm
 | `--graphical` | `-g` | Enable graphical console | false |
 | `--write-mode` | `-w` | Persist changes to disk (disables snapshot) | false |
 | `--ssh-port` | `-p` | Host port for SSH forwarding | 2222 |
-| `--log-file` | `-l` | Serial console log file | `qboot.log` |
+| `--log-file` | `-l` | Serial console log file | `q2boot.log` |
 | `--confirm` | | Show command and wait for keypress before starting | false |
 | `--help` | `-h` | Show help message | - |
 | `--version` | | Show version information | - |
 
 ## Configuration
 
-Q2Boot automatically creates a configuration file at `~/.config/qboot/config.json` on first run:
+Q2Boot automatically creates a configuration file at `~/.config/q2boot/config.json` on first run:
 
 ```json
 {
@@ -97,7 +97,7 @@ Q2Boot automatically creates a configuration file at `~/.config/qboot/config.jso
   "cpu": 2,
   "ram_gb": 2,
   "ssh_port": 2222,
-  "log_file": "qboot.log",
+  "log_file": "q2boot.log",
   "write_mode": false,
   "graphical": false,
   "confirm": false
@@ -148,7 +148,7 @@ The Go version is structured around clean, idiomatic Go patterns:
 
 ```
 q2boot/
-├── cmd/qboot/          # Main application entry point
+├── cmd/q2boot/          # Main application entry point
 ├── internal/config/    # Configuration management
 ├── internal/vm/        # VM implementations
 ├── Makefile           # Build automation
@@ -314,7 +314,7 @@ The Go version offers several improvements over the original D implementation:
 A: The Go version provides the same functionality with better performance, maintainability, and user experience.
 
 **Q: Can I run multiple VMs simultaneously?**
-A: Yes, use different SSH ports: `q2boot -d vm1.img --ssh-port 2222` and `qboot -d vm2.img --ssh-port 2223`
+A: Yes, use different SSH ports: `q2boot -d vm1.img --ssh-port 2222` and `q2boot -d vm2.img --ssh-port 2223`
 
 **Q: How do I create a disk image?**
 A: Use `qemu-img create -f qcow2 disk.img 20G` or `make create-test-disk` for a test image.
@@ -332,8 +332,8 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 - [Cobra](https://github.com/spf13/cobra) - Excellent CLI framework
 - [Viper](https://github.com/spf13/viper) - Configuration management
 - Original D language implementation by Andrea Manzini
-- Contributors and testers who help improve QBoot
+- Contributors and testers who help improve Q2Boot
 
 **Happy virtualizing with Go!** 🎉🐹
 
-If you find QBoot useful, please consider giving it a ⭐ on GitHub!
+If you find Q2Boot useful, please consider giving it a ⭐ on GitHub!

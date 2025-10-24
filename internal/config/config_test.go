@@ -23,8 +23,8 @@ func TestDefaultConfig(t *testing.T) {
 		t.Errorf("Expected SSHPort to be 2222, got %d", cfg.SSHPort)
 	}
 
-	if cfg.LogFile != "qboot.log" {
-		t.Errorf("Expected LogFile to be qboot.log, got %s", cfg.LogFile)
+	if cfg.LogFile != "q2boot.log" {
+		t.Errorf("Expected LogFile to be q2boot.log, got %s", cfg.LogFile)
 	}
 
 	if cfg.WriteMode != false {

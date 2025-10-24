@@ -1,11 +1,11 @@
-# Makefile for QBoot Go project
+# Makefile for Q2Boot Go project
 
 .PHONY: all build clean test install uninstall help run fmt vet lint
 
 # Variables
-BINARY_NAME=qboot
+BINARY_NAME=q2boot
 BUILD_DIR=build
-CMD_DIR=cmd/qboot
+CMD_DIR=cmd/q2boot
 GO_VERSION=$(shell go version | cut -d' ' -f3)
 GIT_COMMIT=$(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 BUILD_TIME=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")

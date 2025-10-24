@@ -1,6 +1,6 @@
-# Contributing to QBoot
+# Contributing to Q2Boot
 
-Thank you for your interest in contributing to QBoot! This guide will help you get started with contributing to our Go-based QEMU VM launcher.
+Thank you for your interest in contributing to Q2Boot! This guide will help you get started with contributing to our Go-based QEMU VM launcher.
 
 ## Table of Contents
 
@@ -42,17 +42,17 @@ Before you begin, ensure you have:
 1. Fork the repository on GitHub
 2. Clone your fork locally:
    ```bash
-   git clone https://github.com/YOUR_USERNAME/qboot.git
-   cd qboot
+   git clone https://github.com/ilmanzo/q2boot.git
+   cd q2boot
    ```
 3. Add the upstream repository:
    ```bash
-   git remote add upstream https://github.com/ilmanzo/qboot.git
+   git remote add upstream https://github.com/ilmanzo/q2boot.git
    ```
 
 ## Development Setup
 
-### Building QBoot
+### Building Q2Boot
 
 ```bash
 # Install dependencies
@@ -71,8 +71,8 @@ make build-all
 ### Project Structure
 
 ```
-qboot/
-├── cmd/qboot/          # Main application entry point
+q2boot/
+├── cmd/q2boot/          # Main application entry point
 ├── internal/config/    # Configuration management
 ├── internal/vm/        # VM implementations and interfaces
 ├── pkg/               # Public packages (if any)
@@ -164,7 +164,7 @@ Common scopes: `vm`, `config`, `cli`, `build`, `ci`
 
 ### Test Categories
 
-QBoot uses several types of tests:
+Q2Boot uses several types of tests:
 
 1. **Unit Tests** - Test individual functions and methods
 2. **Integration Tests** - Test complete workflows
@@ -292,7 +292,7 @@ type ConfigManager interface {}
 
 // Constants: camelCase or ALL_CAPS for exported constants
 const maxCPUCount = 32
-const DefaultLogFile = "qboot.log"
+const DefaultLogFile = "q2boot.log"
 ```
 
 #### Code Organization
@@ -306,7 +306,7 @@ import (
     "github.com/spf13/cobra"
     "github.com/spf13/viper"
     
-    "github.com/ilmanzo/qboot/internal/config"
+    "github.com/ilmanzo/q2boot/internal/config"
 )
 
 // Interface definitions before implementations
@@ -346,7 +346,7 @@ if vm.CPU < 1 || vm.CPU > 32 {
 
 ```go
 // Package documentation
-// Package config provides configuration management for QBoot.
+// Package config provides configuration management for Q2Boot.
 package config
 
 // Function documentation with proper format
@@ -478,7 +478,7 @@ Include the following information:
   - OS and version
   - Go version (`go version`)
   - QEMU version (if applicable)
-  - QBoot version (`./qboot version`)
+  - Q2Boot version (`./q2boot version`)
 
 - **Steps to Reproduce**: Clear, minimal reproduction steps
 - **Expected Behavior**: What should happen
@@ -495,11 +495,11 @@ A clear description of what the bug is.
 ## Environment
 - OS: Ubuntu 22.04
 - Go version: go1.21.0 linux/amd64
-- QBoot version: v1.2.3
+- Q2Boot version: v1.2.3
 - QEMU version: 7.0.0
 
 ## Steps to Reproduce
-1. Run `qboot -d test.img -c 4`
+1. Run `q2boot -d test.img -c 4`
 2. See error
 
 ## Expected Behavior
@@ -584,7 +584,7 @@ When receiving feedback:
 
 ### Versioning
 
-QBoot follows [Semantic Versioning](https://semver.org/):
+Q2Boot follows [Semantic Versioning](https://semver.org/):
 
 - `MAJOR.MINOR.PATCH` (e.g., `1.2.3`)
 - **Major**: Breaking changes or major new features
@@ -631,7 +631,7 @@ New contributors are welcome! If you're new to:
 
 - **Go**: Check out the learning resources above
 - **Open Source**: Start with issues labeled `good first issue`
-- **QBoot**: Read the documentation and ask questions in discussions
+- **Q2Boot**: Read the documentation and ask questions in discussions
 
 ## Recognition
 
@@ -649,8 +649,8 @@ Contributors are recognized through:
 
 ```bash
 # Clone and setup
-git clone https://github.com/YOUR_USERNAME/qboot.git
-cd qboot
+git clone https://github.com/ilmanzo/q2boot.git
+cd q2boot
 
 # Install dependencies
 make deps
@@ -678,4 +678,4 @@ Example `.vscode/settings.json`:
 }
 ```
 
-Thank you for contributing to QBoot! Your efforts help make virtualization more accessible and enjoyable for everyone. 🚀
+Thank you for contributing to Q2Boot! Your efforts help make virtualization more accessible and enjoyable for everyone. 🚀
