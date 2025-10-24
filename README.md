@@ -7,7 +7,7 @@ This is a complete rewrite (hence the v2) of the original D language version, pr
 
 ## Overview
 
-QBoot is a command-line tool that wraps QEMU to provide a streamlined experience for launching virtual machines. It automatically configures common settings like KVM acceleration, virtio drivers, and networking while allowing customization through both configuration files and command-line options.
+Q2Boot is a command-line tool that wraps QEMU to provide a streamlined experience for launching virtual machines. It automatically configures common settings like KVM acceleration, virtio drivers, and networking while allowing customization through both configuration files and command-line options.
 
 ## Features
 
@@ -36,8 +36,8 @@ Booting a ppc64le image
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/qboot.git
-cd qboot
+git clone https://github.com/yourusername/q2boot.git
+cd q2boot
 
 # Build the project
 make build
@@ -56,19 +56,19 @@ Download pre-built binaries from the [releases page](https://github.com/ilmanzo/
 
 ```bash
 # Launch a VM with a disk image
-./build/qboot -d /path/to/your/disk.img
+./build/q2boot -d /path/to/your/disk.img
 
 # Graphical mode
-qboot -d disk.img -g
+q2boot -d disk.img -g
 
 # Custom CPU and RAM settings
-qboot -d disk.img --cpu 4 --ram 8
+q2boot -d disk.img --cpu 4 --ram 8
 
 # Headless mode with persistent changes
-qboot -d disk.img -w
+q2boot -d disk.img -w
 
 # Show command before running
-qboot -d disk.img --confirm
+q2boot -d disk.img --confirm
 ```
 
 ## Command Line Options
@@ -89,7 +89,7 @@ qboot -d disk.img --confirm
 
 ## Configuration
 
-QBoot automatically creates a configuration file at `~/.config/qboot/config.json` on first run:
+Q2Boot automatically creates a configuration file at `~/.config/qboot/config.json` on first run:
 
 ```json
 {
@@ -115,13 +115,13 @@ Configuration values are applied in this order (highest priority first):
 
 ```bash
 # Start a development VM with GUI
-qboot -d ubuntu-dev.img -g -c 4 -r 8
+q2boot -d ubuntu-dev.img -g -c 4 -r 8
 
 # Quick headless test (changes discarded)
-qboot -d test-image.img
+q2boot -d test-image.img
 
 # Persistent headless server
-qboot -d server.img -w --ssh-port 2223
+q2boot -d server.img -w --ssh-port 2223
 ```
 
 ### SSH Access
@@ -137,7 +137,7 @@ ssh -p 2222 user@localhost
 Monitor the VM's serial console:
 
 ```bash
-tail -f qboot.log
+tail -f q2boot.log
 ```
 
 ## Architecture
@@ -147,7 +147,7 @@ The Go version is structured around clean, idiomatic Go patterns:
 ### Project Structure
 
 ```
-qboot/
+q2boot/
 ├── cmd/qboot/          # Main application entry point
 ├── internal/config/    # Configuration management
 ├── internal/vm/        # VM implementations
@@ -166,7 +166,7 @@ qboot/
 
 ### Generated QEMU Command
 
-QBoot generates commands similar to:
+Q2Boot generates commands similar to:
 
 ```bash
 qemu-system-x86_64 \
@@ -183,8 +183,8 @@ qemu-system-x86_64 \
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/qboot.git
-cd qboot
+git clone https://github.com/ilmanzo/q2boot.git
+cd q2boot
 
 # Install dependencies
 make deps
@@ -314,7 +314,7 @@ The Go version offers several improvements over the original D implementation:
 A: The Go version provides the same functionality with better performance, maintainability, and user experience.
 
 **Q: Can I run multiple VMs simultaneously?**
-A: Yes, use different SSH ports: `qboot -d vm1.img --ssh-port 2222` and `qboot -d vm2.img --ssh-port 2223`
+A: Yes, use different SSH ports: `q2boot -d vm1.img --ssh-port 2222` and `qboot -d vm2.img --ssh-port 2223`
 
 **Q: How do I create a disk image?**
 A: Use `qemu-img create -f qcow2 disk.img 20G` or `make create-test-disk` for a test image.
