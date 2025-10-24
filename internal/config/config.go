@@ -27,7 +27,7 @@ func DefaultConfig() *VMConfig {
 		CPU:       2,
 		RAMGb:     2,
 		SSHPort:   2222,
-		LogFile:   "qboot.log",
+		LogFile:   "q2boot.log",
 		WriteMode: false,
 		Graphical: false,
 		Confirm:   false,
