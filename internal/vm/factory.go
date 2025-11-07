@@ -2,6 +2,7 @@ package vm
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -28,12 +29,7 @@ func SupportedArchitectures() []string {
 
 // IsArchSupported checks if the given architecture is supported
 func IsArchSupported(arch string) bool {
-	for _, supported := range SupportedArchitectures() {
-		if arch == supported {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(SupportedArchitectures(), arch)
 }
 
 // GetQEMUBinaryForArch returns the QEMU binary name for the given architecture
