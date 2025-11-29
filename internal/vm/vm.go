@@ -189,7 +189,7 @@ func (v *BaseVM) buildArgs(vm VM) []string {
 	if v.Graphical {
 		args = append(args, vm.GetGraphicalArgs()...)
 	} else {
-		args = append(args, "-nographic")
+		args = append(args, "-display", "curses")
 		if !v.NoSnapshot {
 			args = append(args, "-snapshot")
 		}
