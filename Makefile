@@ -59,6 +59,11 @@ benchmark:
 	@echo "Running benchmarks..."
 	go test -bench=. -benchmem ./...
 
+# Run end-to-end tests
+test-e2e:
+	@echo "Running end-to-end tests..."
+	go test -v -tags=e2e ./cmd/q2boot
+
 # Install dependencies
 deps:
 	@echo "Installing dependencies..."
@@ -141,6 +146,7 @@ help:
 	@echo "  build-all      Cross-compile for multiple platforms"
 	@echo "  test           Run tests"
 	@echo "  test-coverage  Run tests with coverage report"
+	@echo "  test-e2e       Run end-to-end tests"
 	@echo "  benchmark      Run benchmarks"
 	@echo "  deps           Install dependencies"
 	@echo "  fmt            Format code"

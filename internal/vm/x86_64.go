@@ -2,8 +2,6 @@ package vm
 
 import (
 	"fmt"
-
-	"github.com/ilmanzo/q2boot/internal/config"
 )
 
 // X86_64VM implements VM for x86_64 architecture
@@ -53,53 +51,10 @@ func (vm *X86_64VM) GetGraphicalArgs() []string {
 
 // BuildArgs builds the complete argument list for x86_64
 func (vm *X86_64VM) BuildArgs() []string {
-	var args []string
-
-	// Add architecture-specific arguments
-	args = append(args, vm.GetArchArgs()...)
-
-	// Add common arguments
-	args = append(args, "-smp", fmt.Sprintf("%d", vm.CPU))
-	args = append(args, "-m", fmt.Sprintf("%dG", vm.RAM))
-
-	// Add disk arguments
-	args = append(args, vm.GetDiskArgs()...)
-
-	// Add network arguments
-	args = append(args, vm.GetNetworkArgs()...)
-
-	// Add audio device (disabled)
-	args = append(args, "-audiodev", "none,id=snd0")
-
-	// Handle display mode
-	if vm.Graphical {
-		args = append(args, vm.GetGraphicalArgs()...)
-	} else {
-		args = append(args, "-nographic")
-		if !vm.NoSnapshot {
-			args = append(args, "-snapshot")
-		}
-		args = append(args, "-serial", "stdio", "-monitor", "none")
-	}
-
-	return args
+	return vm.buildArgs(vm)
 }
 
 // Run executes the x86_64 VM
 func (vm *X86_64VM) Run() error {
-	if err := ValidateDiskPath(vm.DiskPath); err != nil {
-		return err
-	}
-
-	if err := ValidateVMConfig(vm.BaseVM); err != nil {
-		return err
-	}
-
-	args := vm.BuildArgs()
-	return RunVM(vm.QEMUBinary(), args, vm.Confirm)
-}
-
-// Configure sets up the VM with the provided configuration
-func (vm *X86_64VM) Configure(cfg *config.VMConfig) {
-	vm.BaseVM.Configure(cfg)
+	return vm.run(vm)
 }

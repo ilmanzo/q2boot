@@ -83,6 +83,21 @@ func (v *BaseVM) SetDiskPath(path string) {
 	v.DiskPath = path
 }
 
+// run is a helper to execute the VM, containing logic common to all architectures.
+// It relies on the passed-in VM interface to get architecture-specific details.
+func (v *BaseVM) run(vm VM) error {
+	if err := ValidateDiskPath(v.DiskPath); err != nil {
+		return err
+	}
+
+	if err := ValidateVMConfig(v); err != nil {
+		return err
+	}
+
+	args := vm.BuildArgs()
+	return RunVM(vm.QEMUBinary(), args, v.Confirm)
+}
+
 // GetInstallationInstructions returns architecture-specific installation instructions for a QEMU binary
 func GetInstallationInstructions(binary string) string {
 	var ubuntuPkg, suseArch, archPkg string
@@ -148,29 +163,31 @@ func ValidateVMConfig(vm *BaseVM) error {
 	return nil
 }
 
-// BuildCommonArgs builds the common QEMU arguments for all architectures
-func (v *BaseVM) BuildCommonArgs(archArgs, diskArgs, netArgs []string) []string {
+// buildArgs is a helper to build the QEMU command line arguments, containing
+// logic common to all architectures. It relies on the passed-in VM interface to get
+// architecture-specific details.
+func (v *BaseVM) buildArgs(vm VM) []string {
 	var args []string
 
 	// Add architecture-specific arguments
-	args = append(args, archArgs...)
+	args = append(args, vm.GetArchArgs()...)
 
 	// Add common arguments
 	args = append(args, "-smp", fmt.Sprintf("%d", v.CPU))
 	args = append(args, "-m", fmt.Sprintf("%dG", v.RAM))
 
 	// Add disk arguments
-	args = append(args, diskArgs...)
+	args = append(args, vm.GetDiskArgs()...)
 
 	// Add network arguments
-	args = append(args, netArgs...)
+	args = append(args, vm.GetNetworkArgs()...)
 
 	// Add audio device (disabled)
 	args = append(args, "-audiodev", "none,id=snd0")
 
 	// Handle display mode
 	if v.Graphical {
-		// Graphical args will be added by specific implementations
+		args = append(args, vm.GetGraphicalArgs()...)
 	} else {
 		args = append(args, "-nographic")
 		if !v.NoSnapshot {

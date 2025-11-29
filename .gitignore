@@ -20,3 +20,4 @@ test-disk.img
 coverage.*
 q2boot
 build/
+diskimages/
