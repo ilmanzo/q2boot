@@ -7,7 +7,7 @@ import (
 )
 
 // CreateVM creates a VM instance based on the specified architecture
-func CreateVM(arch string) (VM, error) {
+var CreateVM = func(arch string) (VM, error) {
 	switch arch {
 	case "x86_64":
 		return NewX86_64VM(), nil

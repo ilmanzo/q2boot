@@ -20,3 +20,8 @@ test-disk.img
 coverage.*
 q2boot
 build/
+diskimages/sle-16.0-aarch64-135.5-textmode@aarch64-uefi-vars.qcow2
+diskimages/sle-16.0-aarch64-135.5-textmode@aarch64.qcow2
+diskimages/sle-16.0-ppc64le-135.5-textmode@ppc64le-p10-virtio.qcow2
+diskimages/sle-16.0-s390x-135.5-textmode@s390x-kvm.qcow2
+diskimages/sle-16.0-x86_64-135.5-textmode@64bit.qcow2
