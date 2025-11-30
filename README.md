@@ -82,6 +82,7 @@ q2boot -d disk.img --confirm
 | `--graphical` | `-g` | Enable graphical console | false |
 | `--write-mode` | `-w` | Persist changes to disk (disables snapshot) | false |
 | `--ssh-port` | `-p` | Host port for SSH forwarding | 2222 |
+| `--monitor-port` | | Port for the QEMU monitor (telnet) | disabled |
 | `--log-file` | `-l` | Serial console log file | `q2boot.log` |
 | `--confirm` | | Show command and wait for keypress before starting | false |
 | `--help` | `-h` | Show help message | - |
@@ -97,6 +98,7 @@ Q2Boot automatically creates a configuration file at `~/.config/q2boot/config.js
   "cpu": 2,
   "ram_gb": 2,
   "ssh_port": 2222,
+  "monitor_port": 0,
   "log_file": "q2boot.log",
   "write_mode": false,
   "graphical": false,
@@ -130,6 +132,18 @@ With the default configuration, you can SSH into your VM:
 
 ```bash
 ssh -p 2222 user@localhost
+```
+
+### QEMU Monitor Access
+
+For debugging, you can expose the QEMU monitor over a telnet port.
+
+```bash
+# Expose the monitor on port 4444
+q2boot -d my-vm.img --monitor-port 4444
+
+# From another terminal, connect to the monitor
+telnet localhost 4444
 ```
 
 ### Log Monitoring

@@ -41,26 +41,28 @@ type VM interface {
 
 // BaseVM provides common functionality for all VM implementations
 type BaseVM struct {
-	DiskPath   string
-	CPU        int
-	RAM        int
-	Graphical  bool
-	NoSnapshot bool
-	Confirm    bool
-	SSHPort    uint16
-	LogFile    string
+	DiskPath    string
+	CPU         int
+	RAM         int
+	Graphical   bool
+	NoSnapshot  bool
+	Confirm     bool
+	SSHPort     uint16
+	MonitorPort uint16
+	LogFile     string
 }
 
 // NewBaseVM creates a new BaseVM with default settings
 func NewBaseVM() *BaseVM {
 	return &BaseVM{
-		CPU:        2,
-		RAM:        2,
-		SSHPort:    2222,
-		LogFile:    "q2boot.log",
-		Graphical:  false,
-		NoSnapshot: false,
-		Confirm:    false,
+		CPU:         2,
+		RAM:         2,
+		SSHPort:     2222,
+		MonitorPort: 0,
+		LogFile:     "q2boot.log",
+		Graphical:   false,
+		NoSnapshot:  false,
+		Confirm:     false,
 	}
 }
 
@@ -69,6 +71,7 @@ func (v *BaseVM) Configure(cfg *config.VMConfig) {
 	v.CPU = cfg.CPU
 	v.RAM = cfg.RAMGb
 	v.SSHPort = cfg.SSHPort
+	v.MonitorPort = cfg.MonitorPort
 	v.LogFile = cfg.LogFile
 	v.Graphical = cfg.Graphical
 	v.NoSnapshot = cfg.WriteMode
@@ -193,8 +196,18 @@ func (v *BaseVM) buildArgs(vm VM) []string {
 		if !v.NoSnapshot {
 			args = append(args, "-snapshot")
 		}
-		args = append(args, "-serial", "stdio", "-monitor", "none")
+		args = append(args, "-serial", "stdio")
 	}
+
+	// Handle monitor configuration
+	if v.MonitorPort > 0 {
+		args = append(args, "-monitor", fmt.Sprintf("telnet:127.0.0.1:%d,server,nowait", v.MonitorPort))
+	} else if !v.Graphical {
+		// For console modes, disable the interactive monitor on stdio by default
+		// This prevents conflicts with the serial console
+		args = append(args, "-monitor", "none")
+	}
+	// For graphical modes, the default monitor is usually in the GUI window, which is fine.
 
 	return args
 }

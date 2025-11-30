@@ -7,15 +7,16 @@ import (
 
 // VMConfig holds the configuration settings for the VM
 type VMConfig struct {
-	Arch      string `json:"arch" mapstructure:"arch"`
-	CPU       int    `json:"cpu" mapstructure:"cpu"`
-	RAMGb     int    `json:"ram_gb" mapstructure:"ram_gb"`
-	SSHPort   uint16 `json:"ssh_port" mapstructure:"ssh_port"`
-	LogFile   string `json:"log_file" mapstructure:"log_file"`
-	WriteMode bool   `json:"write_mode" mapstructure:"write_mode"`
-	Graphical bool   `json:"graphical" mapstructure:"graphical"`
-	Confirm   bool   `json:"confirm" mapstructure:"confirm"`
-	DiskPath  string `json:"disk_path,omitempty" mapstructure:"disk_path"`
+	Arch        string `json:"arch" mapstructure:"arch"`
+	CPU         int    `json:"cpu" mapstructure:"cpu"`
+	RAMGb       int    `json:"ram_gb" mapstructure:"ram_gb"`
+	SSHPort     uint16 `json:"ssh_port" mapstructure:"ssh_port"`
+	MonitorPort uint16 `json:"monitor_port" mapstructure:"monitor_port"`
+	LogFile     string `json:"log_file" mapstructure:"log_file"`
+	WriteMode   bool   `json:"write_mode" mapstructure:"write_mode"`
+	Graphical   bool   `json:"graphical" mapstructure:"graphical"`
+	Confirm     bool   `json:"confirm" mapstructure:"confirm"`
+	DiskPath    string `json:"disk_path,omitempty" mapstructure:"disk_path"`
 }
 
 // DefaultConfig creates a default configuration
@@ -23,14 +24,15 @@ type VMConfig struct {
 // is still useful for testing and programmatic config creation
 func DefaultConfig() *VMConfig {
 	return &VMConfig{
-		Arch:      "x86_64",
-		CPU:       2,
-		RAMGb:     2,
-		SSHPort:   2222,
-		LogFile:   "q2boot.log",
-		WriteMode: false,
-		Graphical: false,
-		Confirm:   false,
+		Arch:        "x86_64",
+		CPU:         2,
+		RAMGb:       2,
+		SSHPort:     2222,
+		MonitorPort: 0, // Default to 0, meaning disabled
+		LogFile:     "q2boot.log",
+		WriteMode:   false,
+		Graphical:   false,
+		Confirm:     false,
 	}
 }
 
@@ -47,6 +49,10 @@ func (c *VMConfig) Validate() error {
 
 	if c.SSHPort < 1024 {
 		return fmt.Errorf("SSH port must be >= 1024, got %d", c.SSHPort)
+	}
+
+	if c.MonitorPort != 0 && c.MonitorPort < 1024 {
+		return fmt.Errorf("monitor port must be >= 1024, got %d", c.MonitorPort)
 	}
 
 	validArchs := []string{"x86_64", "aarch64", "ppc64le", "s390x"}

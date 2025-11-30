@@ -56,7 +56,6 @@ func (vm *S390XVM) GetGraphicalArgs() []string {
 	return []string{
 		"-nographic",
 		"-serial", "stdio",
-		"-monitor", "none",
 	}
 }
 
