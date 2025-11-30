@@ -42,10 +42,13 @@ build-all: fmt vet
 	GOOS=windows GOARCH=amd64 go build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-windows-amd64.exe ./$(CMD_DIR)
 	@echo "Cross-compilation complete"
 
-# Run tests
-test:
-	@echo "Running tests..."
+# Run unit tests
+unit-test:
+	@echo "Running unit tests..."
 	go test -v ./...
+
+# Run tests (unit tests only)
+test: unit-test
 
 # Run tests with coverage
 test-coverage:
@@ -60,7 +63,7 @@ benchmark:
 	go test -bench=. -benchmem ./...
 
 # Run end-to-end tests
-test-e2e:
+e2e-test:
 	@echo "Running end-to-end tests..."
 	go test -v -tags=e2e ./cmd/q2boot
 
@@ -144,9 +147,10 @@ help:
 	@echo "  build          Build the binary"
 	@echo "  release        Build optimized release binary"
 	@echo "  build-all      Cross-compile for multiple platforms"
-	@echo "  test           Run tests"
+	@echo "  test           Run unit tests"
+	@echo "  unit-test      Run unit tests"
 	@echo "  test-coverage  Run tests with coverage report"
-	@echo "  test-e2e       Run end-to-end tests"
+	@echo "  e2e-test       Run end-to-end tests"
 	@echo "  benchmark      Run benchmarks"
 	@echo "  deps           Install dependencies"
 	@echo "  fmt            Format code"

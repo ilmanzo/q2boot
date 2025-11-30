@@ -23,14 +23,16 @@ func (vm *PPC64LEVM) QEMUBinary() string {
 
 // GetArchArgs returns architecture-specific arguments for ppc64le
 func (vm *PPC64LEVM) GetArchArgs() []string {
-	return []string{"-M", "pseries", "-cpu", "POWER9"}
+	return []string{"-M", "pseries", "-cpu", "power10"}
 }
 
 // GetDiskArgs returns disk-specific arguments for ppc64le
 func (vm *PPC64LEVM) GetDiskArgs() []string {
 	return []string{
 		"-drive",
-		fmt.Sprintf("file=%s,if=virtio,cache=writeback,aio=native,discard=unmap,cache.direct=on", vm.DiskPath),
+		fmt.Sprintf("file=%s,id=disk0,if=none,cache=none,aio=native,discard=unmap", vm.DiskPath),
+		"-device",
+		fmt.Sprintf("virtio-blk-pci,drive=disk0,id=dr0,bootindex=1,num-queues=%d", vm.CPU),
 	}
 }
 
@@ -40,13 +42,19 @@ func (vm *PPC64LEVM) GetNetworkArgs() []string {
 		"-netdev",
 		fmt.Sprintf("user,id=net0,hostfwd=tcp::%d-:22", vm.SSHPort),
 		"-device",
-		"virtio-net-pci,netdev=net0",
+		"virtio-net-pci,netdev=net0,mq=on",
 	}
 }
 
 // GetGraphicalArgs returns arguments for graphical mode on ppc64le
 func (vm *PPC64LEVM) GetGraphicalArgs() []string {
 	return []string{"-device", "virtio-vga", "-display", "sdl"}
+}
+
+// GetNonGraphicalDisplayArgs returns display arguments for non-graphical mode on ppc64le
+// ppc64le works better with nographic mode and serial stdio instead of curses
+func (vm *PPC64LEVM) GetNonGraphicalDisplayArgs() []string {
+	return []string{"-nographic"}
 }
 
 // BuildArgs builds the complete argument list for ppc64le

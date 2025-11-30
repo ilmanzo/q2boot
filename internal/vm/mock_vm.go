@@ -40,6 +40,11 @@ func (m *MockVM) GetGraphicalArgs() []string {
 	return []string{"-display", "mock"}
 }
 
+// GetNonGraphicalDisplayArgs is a mock implementation of the GetNonGraphicalDisplayArgs method.
+func (m *MockVM) GetNonGraphicalDisplayArgs() []string {
+	return []string{"-display", "mock-headless"}
+}
+
 // BuildArgs is a mock implementation of the BuildArgs method.
 func (m *MockVM) BuildArgs() []string {
 	return []string{"-mock-arg"}

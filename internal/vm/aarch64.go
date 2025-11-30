@@ -37,7 +37,9 @@ func (vm *AARCH64VM) GetArchArgs() []string {
 func (vm *AARCH64VM) GetDiskArgs() []string {
 	return []string{
 		"-drive",
-		fmt.Sprintf("file=%s,if=virtio,cache=writeback,aio=native,discard=unmap,cache.direct=on", vm.DiskPath),
+		fmt.Sprintf("file=%s,if=none,id=disk0,cache=none,aio=native,discard=unmap", vm.DiskPath),
+		"-device",
+		fmt.Sprintf("virtio-blk-pci,drive=disk0,num-queues=%d", vm.CPU),
 	}
 }
 
@@ -47,13 +49,19 @@ func (vm *AARCH64VM) GetNetworkArgs() []string {
 		"-netdev",
 		fmt.Sprintf("user,id=net0,hostfwd=tcp::%d-:22", vm.SSHPort),
 		"-device",
-		"virtio-net-pci,netdev=net0",
+		"virtio-net-pci,netdev=net0,mq=on",
 	}
 }
 
 // GetGraphicalArgs returns arguments for graphical mode on aarch64
 func (vm *AARCH64VM) GetGraphicalArgs() []string {
 	return []string{"-device", "virtio-gpu-pci", "-display", "sdl"}
+}
+
+// GetNonGraphicalDisplayArgs returns display arguments for non-graphical mode on aarch64
+// aarch64 uses the default curses display for headless mode
+func (vm *AARCH64VM) GetNonGraphicalDisplayArgs() []string {
+	return []string{"-display", "curses"}
 }
 
 // BuildArgs builds the complete argument list for aarch64

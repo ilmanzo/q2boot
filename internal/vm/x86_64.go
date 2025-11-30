@@ -30,7 +30,9 @@ func (vm *X86_64VM) GetArchArgs() []string {
 func (vm *X86_64VM) GetDiskArgs() []string {
 	return []string{
 		"-drive",
-		fmt.Sprintf("file=%s,if=virtio,cache=writeback,aio=native,discard=unmap,cache.direct=on", vm.DiskPath),
+		fmt.Sprintf("file=%s,if=none,id=disk0,cache=none,aio=native,discard=unmap", vm.DiskPath),
+		"-device",
+		fmt.Sprintf("virtio-blk-pci,drive=disk0,num-queues=%d", vm.CPU),
 	}
 }
 
@@ -40,13 +42,19 @@ func (vm *X86_64VM) GetNetworkArgs() []string {
 		"-netdev",
 		fmt.Sprintf("user,id=net0,hostfwd=tcp::%d-:22", vm.SSHPort),
 		"-device",
-		"virtio-net-pci,netdev=net0",
+		"virtio-net-pci,netdev=net0,mq=on",
 	}
 }
 
 // GetGraphicalArgs returns arguments for graphical mode on x86_64
 func (vm *X86_64VM) GetGraphicalArgs() []string {
 	return []string{"-device", "virtio-vga-gl", "-display", "sdl,gl=on"}
+}
+
+// GetNonGraphicalDisplayArgs returns display arguments for non-graphical mode on x86_64
+// x86_64 uses the default curses display for headless mode
+func (vm *X86_64VM) GetNonGraphicalDisplayArgs() []string {
+	return []string{"-display", "curses"}
 }
 
 // BuildArgs builds the complete argument list for x86_64

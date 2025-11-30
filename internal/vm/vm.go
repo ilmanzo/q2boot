@@ -26,6 +26,9 @@ type VM interface {
 	// GetGraphicalArgs returns graphical mode QEMU arguments
 	GetGraphicalArgs() []string
 
+	// GetNonGraphicalDisplayArgs returns display arguments for non-graphical mode
+	GetNonGraphicalDisplayArgs() []string
+
 	// BuildArgs builds the complete QEMU command line arguments
 	BuildArgs() []string
 
@@ -84,6 +87,12 @@ func (v *BaseVM) Configure(cfg *config.VMConfig) {
 // SetDiskPath sets the disk image path
 func (v *BaseVM) SetDiskPath(path string) {
 	v.DiskPath = path
+}
+
+// GetNonGraphicalDisplayArgs returns display arguments for non-graphical mode
+// Default implementation uses curses display
+func (v *BaseVM) GetNonGraphicalDisplayArgs() []string {
+	return []string{"-display", "curses"}
 }
 
 // run is a helper to execute the VM, containing logic common to all architectures.
@@ -154,7 +163,7 @@ func (v *BaseVM) buildArgs(vm VM) []string {
 	if v.Graphical {
 		args = append(args, vm.GetGraphicalArgs()...)
 	} else {
-		args = append(args, "-display", "curses")
+		args = append(args, vm.GetNonGraphicalDisplayArgs()...)
 		if !v.NoSnapshot {
 			args = append(args, "-snapshot")
 		}

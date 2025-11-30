@@ -33,9 +33,9 @@ func (vm *S390XVM) GetArchArgs() []string {
 func (vm *S390XVM) GetDiskArgs() []string {
 	return []string{
 		"-drive",
-		fmt.Sprintf("file=%s,id=disk1,if=none,cache=unsafe,discard=unmap", vm.DiskPath),
+		fmt.Sprintf("file=%s,id=disk1,if=none,cache=none,aio=native,discard=unmap", vm.DiskPath),
 		"-device",
-		"virtio-blk-ccw,drive=disk1,id=dr1,bootindex=1",
+		fmt.Sprintf("virtio-blk-ccw,drive=disk1,id=dr1,bootindex=1,num-queues=%d", vm.CPU),
 	}
 }
 
@@ -45,7 +45,7 @@ func (vm *S390XVM) GetNetworkArgs() []string {
 		"-netdev",
 		fmt.Sprintf("user,id=net1,hostfwd=tcp::%d-:22", vm.SSHPort),
 		"-device",
-		"virtio-net-ccw,netdev=net1",
+		"virtio-net-ccw,netdev=net1,mq=on",
 	}
 }
 
@@ -57,6 +57,12 @@ func (vm *S390XVM) GetGraphicalArgs() []string {
 		"-nographic",
 		"-serial", "stdio",
 	}
+}
+
+// GetNonGraphicalDisplayArgs returns display arguments for non-graphical mode on s390x
+// s390x uses nographic mode with serial console instead of curses
+func (vm *S390XVM) GetNonGraphicalDisplayArgs() []string {
+	return []string{"-nographic"}
 }
 
 // BuildArgs builds the complete argument list for s390x

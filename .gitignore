@@ -18,6 +18,5 @@ console.log
 q2boot-test-library
 test-disk.img
 coverage.*
-q2boot
 build/
 diskimages/
