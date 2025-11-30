@@ -55,22 +55,12 @@ func (c *VMConfig) Validate() error {
 		return fmt.Errorf("monitor port must be >= 1024, got %d", c.MonitorPort)
 	}
 
-	validArchs := []string{"x86_64", "aarch64", "ppc64le", "s390x"}
-	validArch := false
-	for _, arch := range validArchs {
-		if c.Arch == arch {
-			validArch = true
-			break
-		}
-	}
-	if !validArch {
-		return fmt.Errorf("invalid architecture '%s'. Valid options: %v", c.Arch, validArchs)
+	if c.DiskPath == "" {
+		return fmt.Errorf("disk path is required (use -d or --disk)")
 	}
 
-	if c.DiskPath != "" {
-		if _, err := os.Stat(c.DiskPath); os.IsNotExist(err) {
-			return fmt.Errorf("disk image not found at '%s'", c.DiskPath)
-		}
+	if _, err := os.Stat(c.DiskPath); os.IsNotExist(err) {
+		return fmt.Errorf("disk image not found at '%s'", c.DiskPath)
 	}
 
 	return nil

@@ -89,14 +89,6 @@ func (v *BaseVM) SetDiskPath(path string) {
 // run is a helper to execute the VM, containing logic common to all architectures.
 // It relies on the passed-in VM interface to get architecture-specific details.
 func (v *BaseVM) run(vm VM) error {
-	if err := ValidateDiskPath(v.DiskPath); err != nil {
-		return err
-	}
-
-	if err := ValidateVMConfig(v); err != nil {
-		return err
-	}
-
 	args := vm.BuildArgs()
 	return RunVM(vm.QEMUBinary(), args, v.Confirm)
 }
@@ -133,36 +125,6 @@ func ValidateQEMUBinary(binary string) error {
 		instructions := GetInstallationInstructions(binary)
 		return fmt.Errorf("QEMU binary '%s' not found in PATH. %s\nError: %v", binary, instructions, err)
 	}
-	return nil
-}
-
-// ValidateDiskPath validates the disk path and returns an error if it's invalid
-func ValidateDiskPath(diskPath string) error {
-	if diskPath == "" {
-		return fmt.Errorf("disk path cannot be empty. Use -d or --disk")
-	}
-
-	if _, err := os.Stat(diskPath); os.IsNotExist(err) {
-		return fmt.Errorf("disk image not found at '%s'", diskPath)
-	}
-
-	return nil
-}
-
-// ValidateVMConfig validates the VM configuration parameters
-func ValidateVMConfig(vm *BaseVM) error {
-	if vm.CPU < 1 || vm.CPU > 32 {
-		return fmt.Errorf("CPU count must be between 1 and 32, got %d", vm.CPU)
-	}
-
-	if vm.RAM < 1 || vm.RAM > 128 {
-		return fmt.Errorf("RAM must be between 1 and 128 GB, got %d", vm.RAM)
-	}
-
-	if vm.SSHPort < 1024 {
-		return fmt.Errorf("SSH port must be >= 1024, got %d", vm.SSHPort)
-	}
-
 	return nil
 }
 

@@ -1,6 +1,8 @@
 package config
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -41,83 +43,150 @@ func TestDefaultConfig(t *testing.T) {
 }
 
 func TestValidate(t *testing.T) {
+	// Create a temporary file for disk path testing
+	tempDir := t.TempDir()
+	tempFile := filepath.Join(tempDir, "test.img")
+	if err := os.WriteFile(tempFile, []byte("test"), 0644); err != nil {
+		t.Fatalf("Failed to create temp file for testing: %v", err)
+	}
+
 	tests := []struct {
 		name    string
 		config  *VMConfig
 		wantErr bool
 	}{
 		{
-			name:    "valid config",
-			config:  DefaultConfig(),
+			name: "valid config",
+			config: &VMConfig{
+				Arch:     "x86_64",
+				CPU:      2,
+				RAMGb:    4,
+				SSHPort:  2222,
+				DiskPath: tempFile,
+			},
 			wantErr: false,
 		},
 		{
 			name: "invalid CPU - too low",
 			config: &VMConfig{
-				Arch:    "x86_64",
-				CPU:     0,
-				RAMGb:   4,
-				SSHPort: 2222,
+				Arch:     "x86_64",
+				CPU:      0,
+				RAMGb:    4,
+				SSHPort:  2222,
+				DiskPath: tempFile,
 			},
 			wantErr: true,
 		},
 		{
 			name: "invalid CPU - too high",
 			config: &VMConfig{
-				Arch:    "x86_64",
-				CPU:     33,
-				RAMGb:   4,
-				SSHPort: 2222,
+				Arch:     "x86_64",
+				CPU:      33,
+				RAMGb:    4,
+				SSHPort:  2222,
+				DiskPath: tempFile,
 			},
 			wantErr: true,
 		},
 		{
 			name: "invalid RAM - too low",
 			config: &VMConfig{
-				Arch:    "x86_64",
-				CPU:     2,
-				RAMGb:   0,
-				SSHPort: 2222,
+				Arch:     "x86_64",
+				CPU:      2,
+				RAMGb:    0,
+				SSHPort:  2222,
+				DiskPath: tempFile,
 			},
 			wantErr: true,
 		},
 		{
 			name: "invalid RAM - too high",
 			config: &VMConfig{
-				Arch:    "x86_64",
-				CPU:     2,
-				RAMGb:   129,
-				SSHPort: 2222,
+				Arch:     "x86_64",
+				CPU:      2,
+				RAMGb:    129,
+				SSHPort:  2222,
+				DiskPath: tempFile,
 			},
 			wantErr: true,
 		},
 		{
 			name: "invalid SSH port - too low",
 			config: &VMConfig{
-				Arch:    "x86_64",
-				CPU:     2,
-				RAMGb:   4,
-				SSHPort: 1023,
+				Arch:     "x86_64",
+				CPU:      2,
+				RAMGb:    4,
+				SSHPort:  1023,
+				DiskPath: tempFile,
 			},
 			wantErr: true,
 		},
 		{
 			name: "valid SSH port - high value",
 			config: &VMConfig{
-				Arch:    "x86_64",
-				CPU:     2,
-				RAMGb:   4,
-				SSHPort: 65535,
+				Arch:     "x86_64",
+				CPU:      2,
+				RAMGb:    4,
+				SSHPort:  65535,
+				DiskPath: tempFile,
 			},
 			wantErr: false,
 		},
 		{
-			name: "invalid architecture",
+			name: "invalid monitor port - too low",
 			config: &VMConfig{
-				Arch:    "invalid",
-				CPU:     2,
-				RAMGb:   4,
-				SSHPort: 2222,
+				Arch:        "x86_64",
+				CPU:         2,
+				RAMGb:       4,
+				SSHPort:     2222,
+				MonitorPort: 1023,
+				DiskPath:    tempFile,
+			},
+			wantErr: true,
+		},
+		{
+			name: "valid monitor port - disabled",
+			config: &VMConfig{
+				Arch:        "x86_64",
+				CPU:         2,
+				RAMGb:       4,
+				SSHPort:     2222,
+				MonitorPort: 0,
+				DiskPath:    tempFile,
+			},
+			wantErr: false,
+		},
+		{
+			name: "valid monitor port - enabled",
+			config: &VMConfig{
+				Arch:        "x86_64",
+				CPU:         2,
+				RAMGb:       4,
+				SSHPort:     2222,
+				MonitorPort: 1024,
+				DiskPath:    tempFile,
+			},
+			wantErr: false,
+		},
+		{
+			name: "invalid disk path - empty",
+			config: &VMConfig{
+				Arch:     "x86_64",
+				CPU:      2,
+				RAMGb:    4,
+				SSHPort:  2222,
+				DiskPath: "",
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid disk path - not found",
+			config: &VMConfig{
+				Arch:     "x86_64",
+				CPU:      2,
+				RAMGb:    4,
+				SSHPort:  2222,
+				DiskPath: "/path/to/non/existent/disk.img",
 			},
 			wantErr: true,
 		},

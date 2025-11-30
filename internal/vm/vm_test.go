@@ -2,8 +2,6 @@ package vm
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -75,7 +73,7 @@ func TestBaseConfigure(t *testing.T) {
 	}
 
 	if vm.Graphical != cfg.Graphical {
-		t.Errorf("Expected Graphical to be %t, got %t", cfg.Graphical, vm.Graphical)
+		t.Errorf("Expected Graphical to be %t, got %t", vm.Graphical, vm.Graphical)
 	}
 
 	if vm.NoSnapshot != cfg.WriteMode {
@@ -88,141 +86,6 @@ func TestBaseConfigure(t *testing.T) {
 
 	if vm.DiskPath != cfg.DiskPath {
 		t.Errorf("Expected DiskPath to be %s, got %s", cfg.DiskPath, vm.DiskPath)
-	}
-}
-
-func TestValidateDiskPath(t *testing.T) {
-	tests := []struct {
-		name     string
-		diskPath string
-		wantErr  bool
-	}{
-		{
-			name:     "empty path",
-			diskPath: "",
-			wantErr:  true,
-		},
-		{
-			name:     "non-existent path",
-			diskPath: "/non/existent/path.img",
-			wantErr:  true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := ValidateDiskPath(tt.diskPath)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ValidateDiskPath() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
-func TestValidateDiskPathWithRealFile(t *testing.T) {
-	// Create a temporary file for testing
-	tempDir, err := os.MkdirTemp("", "q2boot-test")
-	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
-
-	tempFile := filepath.Join(tempDir, "test.img")
-	err = os.WriteFile(tempFile, []byte("test content"), 0644)
-	if err != nil {
-		t.Fatalf("Failed to create temp file: %v", err)
-	}
-
-	// Test with existing file
-	err = ValidateDiskPath(tempFile)
-	if err != nil {
-		t.Errorf("ValidateDiskPath() with existing file should not return error, got: %v", err)
-	}
-}
-
-func TestValidateVMConfig(t *testing.T) {
-	tests := []struct {
-		name    string
-		vm      *BaseVM
-		wantErr bool
-	}{
-		{
-			name:    "valid config",
-			vm:      NewBaseVM(),
-			wantErr: false,
-		},
-		{
-			name: "invalid CPU - too low",
-			vm: &BaseVM{
-				CPU:     0,
-				RAM:     4,
-				SSHPort: 2222,
-			},
-			wantErr: true,
-		},
-		{
-			name: "invalid CPU - too high",
-			vm: &BaseVM{
-				CPU:     33,
-				RAM:     4,
-				SSHPort: 2222,
-			},
-			wantErr: true,
-		},
-		{
-			name: "invalid RAM - too low",
-			vm: &BaseVM{
-				CPU:     2,
-				RAM:     0,
-				SSHPort: 2222,
-			},
-			wantErr: true,
-		},
-		{
-			name: "invalid RAM - too high",
-			vm: &BaseVM{
-				CPU:     2,
-				RAM:     129,
-				SSHPort: 2222,
-			},
-			wantErr: true,
-		},
-		{
-			name: "invalid SSH port - too low",
-			vm: &BaseVM{
-				CPU:     2,
-				RAM:     4,
-				SSHPort: 1023,
-			},
-			wantErr: true,
-		},
-		{
-			name: "valid SSH port - maximum",
-			vm: &BaseVM{
-				CPU:     2,
-				RAM:     4,
-				SSHPort: 65535,
-			},
-			wantErr: false,
-		},
-		{
-			name: "invalid SSH port - below minimum",
-			vm: &BaseVM{
-				CPU:     2,
-				RAM:     4,
-				SSHPort: 1023,
-			},
-			wantErr: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := ValidateVMConfig(tt.vm)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ValidateVMConfig() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
 	}
 }
 
