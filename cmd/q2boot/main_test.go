@@ -42,7 +42,7 @@ func TestDefaultArchitecture(t *testing.T) {
 	testRunE := func(cmd *cobra.Command, args []string) error {
 		// The core logic from main.go is now in runQ2BootE
 		// We pass our test config to it.
-		return runQ2BootE(cmd, testCfg)
+		return runQ2BootE(cmd, args, testCfg)
 	}
 
 	// Temporarily replace the command's RunE function with our test function
@@ -50,14 +50,15 @@ func TestDefaultArchitecture(t *testing.T) {
 	rootCmd.RunE = testRunE
 	defer func() { rootCmd.RunE = originalRunE }()
 
-	// Execute the root command with only the required disk flag
-	rootCmd.SetArgs([]string{"--disk", tempFile})
+	// Execute the root command with the disk path as a positional argument
+	rootCmd.SetArgs([]string{tempFile})
 
 	// We only care about the config validation part, so we ignore the QEMU execution error
 	_ = rootCmd.Execute()
 
-	if testCfg.Arch != "x86_64" {
-		t.Errorf("Expected architecture to default to 'x86_64', but got '%s'", testCfg.Arch)
+	// Architecture is now empty by default (triggers auto-detection)
+	if testCfg.Arch != "" {
+		t.Errorf("Expected architecture to default to '' (auto-detect), but got '%s'", testCfg.Arch)
 	}
 }
 
@@ -104,7 +105,7 @@ func TestFlagOverridesConfig(t *testing.T) {
 		// Manually call initConfig to load from our temp file
 		initConfig()
 		// The core logic will unmarshal into the global cfg, then we run our logic
-		return runQ2BootE(cmd, cfg)
+		return runQ2BootE(cmd, args, cfg)
 	}
 
 	originalRunE := rootCmd.RunE
@@ -113,7 +114,7 @@ func TestFlagOverridesConfig(t *testing.T) {
 
 	// 3. Execute with flags that override the config file
 	rootCmd.SetArgs([]string{
-		"--disk", tempDisk,
+		tempDisk,
 		"--arch", "ppc64le", // Override "aarch64"
 		"--cpu", "4", // Override 8
 		"--ram", "8", // Override 16

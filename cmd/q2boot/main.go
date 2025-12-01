@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/ilmanzo/q2boot/internal/config"
+	"github.com/ilmanzo/q2boot/internal/detector"
 	"github.com/ilmanzo/q2boot/internal/logger"
 	"github.com/ilmanzo/q2boot/internal/vm"
 )
@@ -25,7 +26,6 @@ const (
 
 // Flags holds all command-line flag values
 type Flags struct {
-	DiskPath    string
 	CPU         int
 	RAM         int
 	Arch        string
@@ -51,13 +51,14 @@ var (
 )
 
 var rootCmd = &cobra.Command{
-	Use:     "q2boot",
+	Use:     "q2boot [flags] <disk_image_path>",
 	Version: version,
 	Short:   "A handy QEMU VM launcher",
 	Long: `Q2Boot is a command-line tool that wraps QEMU to provide a streamlined
 experience for launching virtual machines. It automatically configures common
 settings like KVM acceleration, virtio drivers, and networking while allowing
 customization through both configuration files and command-line options.`,
+	Args: cobra.ExactArgs(1), // Expect exactly one argument: the disk image path
 	RunE: runQ2Boot,
 }
 
@@ -107,10 +108,9 @@ func init() {
 	rootCmd.AddCommand(versionCmd)
 
 	// Define command line flags
-	rootCmd.PersistentFlags().StringVarP(&flags.DiskPath, "disk", "d", "", "Path to the disk image (required)")
 	rootCmd.PersistentFlags().IntVarP(&flags.CPU, "cpu", "c", 0, "Number of CPU cores (default: 2)")
 	rootCmd.PersistentFlags().IntVarP(&flags.RAM, "ram", "r", 0, "Amount of RAM in GB (default: 2)")
-	rootCmd.PersistentFlags().StringVarP(&flags.Arch, "arch", "a", "x86_64", "CPU architecture (x86_64, aarch64, ppc64le, s390x)")
+	rootCmd.PersistentFlags().StringVarP(&flags.Arch, "arch", "a", "", "CPU architecture (x86_64, aarch64, ppc64le, s390x). Auto-detected from disk image if not specified")
 	rootCmd.PersistentFlags().Uint16VarP(&flags.SSHPort, "ssh-port", "p", 0, "Host port for SSH forwarding (default: 2222)")
 	rootCmd.PersistentFlags().StringVarP(&flags.LogFile, "log-file", "l", "", "Path to the log file (default: q2boot.log)")
 	rootCmd.PersistentFlags().BoolVarP(&flags.Graphical, "graphical", "g", false, "Enable graphical console (default: false)")
@@ -118,11 +118,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&flags.Confirm, "confirm", false, "Show command and wait for keypress before starting (default: false)")
 	rootCmd.PersistentFlags().Uint16VarP(&flags.MonitorPort, "monitor-port", "m", 0, "Port for the QEMU monitor (telnet)")
 
-	// Mark required flags only for root command, not subcommands
-	rootCmd.MarkFlagRequired("disk")
-
 	// Bind flags to viper
-	viper.BindPFlag("disk", rootCmd.PersistentFlags().Lookup("disk"))
 	viper.BindPFlag("cpu", rootCmd.PersistentFlags().Lookup("cpu"))
 	viper.BindPFlag("ram", rootCmd.PersistentFlags().Lookup("ram"))
 	viper.BindPFlag("arch", rootCmd.PersistentFlags().Lookup("arch"))
@@ -163,7 +159,7 @@ func initConfig() {
 	viper.AddConfigPath(configDir)
 
 	// Set defaults
-	viper.SetDefault("arch", "x86_64")
+	viper.SetDefault("arch", "")
 	viper.SetDefault("cpu", config.DefaultCPU)
 	viper.SetDefault("ram_gb", config.DefaultRAMGb)
 	viper.SetDefault("ssh_port", config.DefaultSSHPort)
@@ -194,15 +190,13 @@ func initConfig() {
 }
 
 func runQ2Boot(cmd *cobra.Command, args []string) error {
-	return runQ2BootE(cmd, cfg)
+	return runQ2BootE(cmd, args, cfg)
 }
 
 // applyFlagOverrides applies command-line flag overrides to the configuration.
 // It checks which flags were explicitly set and overwrites the corresponding config values.
-func applyFlagOverrides(cmd *cobra.Command, f *Flags, cfg *config.VMConfig) {
-	if f.DiskPath != "" {
-		cfg.DiskPath = f.DiskPath
-	}
+func applyFlagOverrides(cmd *cobra.Command, f *Flags, cfg *config.VMConfig, diskPath string) {
+	cfg.DiskPath = diskPath
 	if f.CPU > 0 {
 		cfg.CPU = f.CPU
 	}
@@ -232,10 +226,32 @@ func applyFlagOverrides(cmd *cobra.Command, f *Flags, cfg *config.VMConfig) {
 	}
 }
 
+// detectArchitecture automatically detects the architecture from the disk image.
+// This is called when no explicit architecture was provided via flag.
+func detectArchitecture(diskPath string) (string, error) {
+	logger.Info("Attempting to detect architecture from disk image", "disk", diskPath)
+	arch, err := detector.DetectArchitecture(diskPath)
+	if err != nil {
+		return "", err
+	}
+	logger.Info("Successfully detected architecture", "arch", arch)
+	return arch, nil
+}
+
 // runQ2BootE contains the core logic for running the VM, making it testable.
-func runQ2BootE(cmd *cobra.Command, cfg *config.VMConfig) error {
+func runQ2BootE(cmd *cobra.Command, args []string, cfg *config.VMConfig) error {
 	// Apply flag overrides to configuration
-	applyFlagOverrides(cmd, flags, cfg)
+	applyFlagOverrides(cmd, flags, cfg, args[0])
+
+	// If architecture was not explicitly provided via the command-line flag,
+	// attempt automatic detection. This correctly ignores any 'arch' from the config file.
+	if !cmd.Flags().Changed("arch") {
+		detectedArch, err := detectArchitecture(cfg.DiskPath)
+		if err != nil {
+			return fmt.Errorf("architecture not specified and automatic detection failed: %w", err)
+		}
+		cfg.Arch = detectedArch
+	}
 
 	// Validate configuration
 	if err := cfg.Validate(); err != nil {

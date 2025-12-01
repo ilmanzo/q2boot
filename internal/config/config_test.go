@@ -9,8 +9,9 @@ import (
 func TestDefaultConfig(t *testing.T) {
 	cfg := DefaultConfig()
 
-	if cfg.Arch != "x86_64" {
-		t.Errorf("Expected arch to be x86_64, got %s", cfg.Arch)
+	// Architecture defaults to empty string (triggers auto-detection)
+	if cfg.Arch != "" {
+		t.Errorf("Expected arch to be empty (auto-detect), got %s", cfg.Arch)
 	}
 
 	if cfg.CPU != 2 {

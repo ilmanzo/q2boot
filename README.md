@@ -54,29 +54,30 @@ Download pre-built binaries from the [releases page](https://github.com/ilmanzo/
 
 ### Basic Usage
 
+The only required argument is the path to the disk image you want to boot.
+
 ```bash
 # Launch a VM with a disk image
-./build/q2boot -d /path/to/your/disk.img
+./build/q2boot /path/to/your/disk.img
 
 # Graphical mode
-q2boot -d disk.img -g
+q2boot disk.img -g
 
 # Custom CPU and RAM settings
-q2boot -d disk.img --cpu 4 --ram 8
+q2boot disk.img --cpu 4 --ram 8
 
 # Headless mode with persistent changes
-q2boot -d disk.img -w
+q2boot disk.img -w
 
 # Show command before running
-q2boot -d disk.img --confirm
+q2boot disk.img --confirm
 ```
 
 ## Command Line Options
 
 | Option | Short | Description | Default |
 |--------|-------|-------------|---------|
-| `--arch` | `-a` | CPU architecture (`x86_64`, `aarch64`, etc.) | `x86_64` |
-| `--disk` | `-d` | Path to disk image (required) | - |
+| `--arch` | `-a` | CPU architecture (`x86_64`, `aarch64`, etc.) | autodetected |
 | `--cpu` | `-c` | Number of CPU cores | 2 |
 | `--ram` | `-r` | RAM in GB | 4 |
 | `--graphical` | `-g` | Enable graphical console | false |
@@ -117,13 +118,13 @@ Configuration values are applied in this order (highest priority first):
 
 ```bash
 # Start a development VM with GUI
-q2boot -d ubuntu-dev.img -g -c 4 -r 8
+q2boot ubuntu-dev.img -g -c 4 -r 8
 
 # Quick headless test (changes discarded)
-q2boot -d test-image.img
+q2boot test-image.img
 
 # Persistent headless server
-q2boot -d server.img -w --ssh-port 2223
+q2boot server.img -w --ssh-port 2223
 ```
 
 ### SSH Access
@@ -287,6 +288,7 @@ We welcome contributions! Here's how to get started:
 - Linux, macOS, or Windows
 - QEMU installed and in PATH
 - KVM support (Linux) for hardware acceleration
+- `guestfs-tools` for automatic architecture detection (optional, package may be named `libguestfs-tools`).
 - Sufficient RAM for host + VM requirements
 
 ### Build Requirements
