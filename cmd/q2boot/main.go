@@ -23,6 +23,20 @@ const (
 	ConfigFileFormat     = "json"
 )
 
+// Flags holds all command-line flag values
+type Flags struct {
+	DiskPath    string
+	CPU         int
+	RAM         int
+	Arch        string
+	SSHPort     uint16
+	MonitorPort uint16
+	LogFile     string
+	Graphical   bool
+	WriteMode   bool
+	Confirm     bool
+}
+
 var (
 	// Version information - set by build flags
 	version   = "dev"
@@ -30,16 +44,7 @@ var (
 	buildTime = "unknown"
 
 	// Command line flags
-	diskPath    string
-	cpu         int
-	ram         int
-	arch        string
-	sshPort     uint16
-	monitorPort uint16
-	logFile     string
-	graphical   bool
-	writeMode   bool
-	confirm     bool
+	flags = &Flags{}
 
 	// Configuration
 	cfg *config.VMConfig
@@ -102,16 +107,16 @@ func init() {
 	rootCmd.AddCommand(versionCmd)
 
 	// Define command line flags
-	rootCmd.PersistentFlags().StringVarP(&diskPath, "disk", "d", "", "Path to the disk image (required)")
-	rootCmd.PersistentFlags().IntVarP(&cpu, "cpu", "c", 0, "Number of CPU cores (default: 2)")
-	rootCmd.PersistentFlags().IntVarP(&ram, "ram", "r", 0, "Amount of RAM in GB (default: 2)")
-	rootCmd.PersistentFlags().StringVarP(&arch, "arch", "a", "x86_64", "CPU architecture (x86_64, aarch64, ppc64le, s390x)")
-	rootCmd.PersistentFlags().Uint16VarP(&sshPort, "ssh-port", "p", 0, "Host port for SSH forwarding (default: 2222)")
-	rootCmd.PersistentFlags().StringVarP(&logFile, "log-file", "l", "", "Path to the log file (default: q2boot.log)")
-	rootCmd.PersistentFlags().BoolVarP(&graphical, "graphical", "g", false, "Enable graphical console (default: false)")
-	rootCmd.PersistentFlags().BoolVarP(&writeMode, "write-mode", "w", false, "Enable write mode (changes are saved to disk) (default: false)")
-	rootCmd.PersistentFlags().BoolVar(&confirm, "confirm", false, "Show command and wait for keypress before starting (default: false)")
-	rootCmd.PersistentFlags().Uint16VarP(&monitorPort, "monitor-port", "m", 0, "Port for the QEMU monitor (telnet)")
+	rootCmd.PersistentFlags().StringVarP(&flags.DiskPath, "disk", "d", "", "Path to the disk image (required)")
+	rootCmd.PersistentFlags().IntVarP(&flags.CPU, "cpu", "c", 0, "Number of CPU cores (default: 2)")
+	rootCmd.PersistentFlags().IntVarP(&flags.RAM, "ram", "r", 0, "Amount of RAM in GB (default: 2)")
+	rootCmd.PersistentFlags().StringVarP(&flags.Arch, "arch", "a", "x86_64", "CPU architecture (x86_64, aarch64, ppc64le, s390x)")
+	rootCmd.PersistentFlags().Uint16VarP(&flags.SSHPort, "ssh-port", "p", 0, "Host port for SSH forwarding (default: 2222)")
+	rootCmd.PersistentFlags().StringVarP(&flags.LogFile, "log-file", "l", "", "Path to the log file (default: q2boot.log)")
+	rootCmd.PersistentFlags().BoolVarP(&flags.Graphical, "graphical", "g", false, "Enable graphical console (default: false)")
+	rootCmd.PersistentFlags().BoolVarP(&flags.WriteMode, "write-mode", "w", false, "Enable write mode (changes are saved to disk) (default: false)")
+	rootCmd.PersistentFlags().BoolVar(&flags.Confirm, "confirm", false, "Show command and wait for keypress before starting (default: false)")
+	rootCmd.PersistentFlags().Uint16VarP(&flags.MonitorPort, "monitor-port", "m", 0, "Port for the QEMU monitor (telnet)")
 
 	// Mark required flags only for root command, not subcommands
 	rootCmd.MarkFlagRequired("disk")
@@ -189,41 +194,48 @@ func initConfig() {
 }
 
 func runQ2Boot(cmd *cobra.Command, args []string) error {
-	return runQ2BootE(cmd, args, cfg)
+	return runQ2BootE(cmd, cfg)
+}
+
+// applyFlagOverrides applies command-line flag overrides to the configuration.
+// It checks which flags were explicitly set and overwrites the corresponding config values.
+func applyFlagOverrides(cmd *cobra.Command, f *Flags, cfg *config.VMConfig) {
+	if f.DiskPath != "" {
+		cfg.DiskPath = f.DiskPath
+	}
+	if f.CPU > 0 {
+		cfg.CPU = f.CPU
+	}
+	if f.RAM > 0 {
+		cfg.RAMGb = f.RAM
+	}
+	if f.Arch != "" {
+		cfg.Arch = f.Arch
+	}
+	if f.SSHPort > 0 {
+		cfg.SSHPort = f.SSHPort
+	}
+	if f.LogFile != "" {
+		cfg.LogFile = f.LogFile
+	}
+	if cmd.Flags().Changed("graphical") {
+		cfg.Graphical = f.Graphical
+	}
+	if cmd.Flags().Changed("write-mode") {
+		cfg.WriteMode = f.WriteMode
+	}
+	if cmd.Flags().Changed("confirm") {
+		cfg.Confirm = f.Confirm
+	}
+	if cmd.Flags().Changed("monitor-port") {
+		cfg.MonitorPort = f.MonitorPort
+	}
 }
 
 // runQ2BootE contains the core logic for running the VM, making it testable.
-func runQ2BootE(cmd *cobra.Command, args []string, cfg *config.VMConfig) error {
-	if diskPath != "" {
-		cfg.DiskPath = diskPath
-	}
-	if cpu > 0 {
-		cfg.CPU = cpu
-	}
-	if ram > 0 {
-		cfg.RAMGb = ram
-	}
-	if arch != "" {
-		cfg.Arch = arch
-	}
-	if sshPort > 0 {
-		cfg.SSHPort = sshPort
-	}
-	if logFile != "" {
-		cfg.LogFile = logFile
-	}
-	if cmd.Flags().Changed("graphical") {
-		cfg.Graphical = graphical
-	}
-	if cmd.Flags().Changed("write-mode") {
-		cfg.WriteMode = writeMode
-	}
-	if cmd.Flags().Changed("confirm") {
-		cfg.Confirm = confirm
-	}
-	if cmd.Flags().Changed("monitor-port") {
-		cfg.MonitorPort = monitorPort
-	}
+func runQ2BootE(cmd *cobra.Command, cfg *config.VMConfig) error {
+	// Apply flag overrides to configuration
+	applyFlagOverrides(cmd, flags, cfg)
 
 	// Validate configuration
 	if err := cfg.Validate(); err != nil {

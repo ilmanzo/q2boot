@@ -42,7 +42,7 @@ func TestDefaultArchitecture(t *testing.T) {
 	testRunE := func(cmd *cobra.Command, args []string) error {
 		// The core logic from main.go is now in runQ2BootE
 		// We pass our test config to it.
-		return runQ2BootE(cmd, args, testCfg)
+		return runQ2BootE(cmd, testCfg)
 	}
 
 	// Temporarily replace the command's RunE function with our test function
@@ -104,7 +104,7 @@ func TestFlagOverridesConfig(t *testing.T) {
 		// Manually call initConfig to load from our temp file
 		initConfig()
 		// The core logic will unmarshal into the global cfg, then we run our logic
-		return runQ2BootE(cmd, args, cfg)
+		return runQ2BootE(cmd, cfg)
 	}
 
 	originalRunE := rootCmd.RunE
