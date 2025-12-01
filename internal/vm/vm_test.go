@@ -522,3 +522,108 @@ func TestValidatePortsAvailable(t *testing.T) {
 		})
 	}
 }
+
+func TestBuildArgs(t *testing.T) {
+	type buildArgsTest struct {
+		name        string
+		setupVM     func(vm *MockVM)
+		wantArgs    []string
+		notWantArgs []string
+	}
+
+	tests := []buildArgsTest{
+		{
+			name: "default non-graphical",
+			setupVM: func(vm *MockVM) {
+				vm.Graphical = false
+				vm.NoSnapshot = false
+			},
+			wantArgs:    []string{"-snapshot", "-display", "mock-headless", "-monitor", "none"},
+			notWantArgs: []string{},
+		},
+		{
+			name: "non-graphical with write mode",
+			setupVM: func(vm *MockVM) {
+				vm.Graphical = false
+				vm.NoSnapshot = true
+			},
+			wantArgs:    []string{"-display", "mock-headless", "-monitor", "none"},
+			notWantArgs: []string{"-snapshot"},
+		},
+		{
+			name: "graphical mode",
+			setupVM: func(vm *MockVM) {
+				vm.Graphical = true
+			},
+			wantArgs:    []string{"-display", "mock"},
+			notWantArgs: []string{"-snapshot", "-monitor", "none"},
+		},
+		{
+			name: "graphical mode with nographic fallback",
+			setupVM: func(vm *MockVM) {
+				vm.Graphical = true
+				// Simulate an arch like s390x where graphical is a serial console
+				vm.GetGraphicalArgsFunc = func() []string {
+					return []string{"-nographic", "-serial", "stdio"}
+				}
+			},
+			wantArgs:    []string{"-nographic", "-serial", "stdio", "-monitor", "none"},
+			notWantArgs: []string{"-snapshot"},
+		},
+		{
+			name: "with monitor port",
+			setupVM: func(vm *MockVM) {
+				vm.MonitorPort = 9999
+			},
+			wantArgs:    []string{"-monitor", "telnet:127.0.0.1:9999,server,nowait"},
+			notWantArgs: []string{},
+		},
+		{
+			name: "common args present",
+			setupVM: func(vm *MockVM) {
+				vm.CPU = 4
+				vm.RAM = 8
+				vm.DiskPath = "/tmp/disk.qcow2"
+			},
+			wantArgs: []string{
+				"-smp", "4",
+				"-m", "8G",
+				"-drive", "file=mock.img", // From MockVM
+				"-netdev", "user,id=net0", // From MockVM
+				"-audiodev", "none,id=snd0",
+			},
+			notWantArgs: []string{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create a fresh mock for each test
+			vm := NewMockVM()
+
+			// Apply test-specific setup
+			if tt.setupVM != nil {
+				tt.setupVM(vm)
+			}
+
+			// Build the args
+			args := vm.buildArgs(vm)
+			argsStr := " " + strings.Join(args, " ") + " "
+
+			// Check for wanted arguments
+			for _, want := range tt.wantArgs {
+				// Use spaces to ensure we match whole arguments
+				if !strings.Contains(argsStr, " "+want+" ") {
+					t.Errorf("buildArgs() output missing expected argument: %s\nGot: %s", want, argsStr)
+				}
+			}
+
+			// Check for unwanted arguments
+			for _, notWant := range tt.notWantArgs {
+				if strings.Contains(argsStr, " "+notWant+" ") {
+					t.Errorf("buildArgs() output contains unexpected argument: %s\nGot: %s", notWant, argsStr)
+				}
+			}
+		})
+	}
+}
