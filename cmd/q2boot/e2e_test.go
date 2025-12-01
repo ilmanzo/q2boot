@@ -85,7 +85,7 @@ func runQ2BootAndCheck(t *testing.T, q2bootPath string, arch string, diskImage s
 
 	// Prepare the q2boot command
 	cmd := exec.CommandContext(ctx, q2bootPath,
-		"-d", diskImage,
+		diskImage,
 		"-a", arch,
 		"--monitor-port", fmt.Sprintf("%d", monitorPort),
 		"--ssh-port", fmt.Sprintf("%d", sshPort),

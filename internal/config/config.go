@@ -39,7 +39,6 @@ type VMConfig struct {
 // is still useful for testing and programmatic config creation
 func DefaultConfig() *VMConfig {
 	return &VMConfig{
-		Arch:          "x86_64",
 		CPU:           DefaultCPU,
 		RAMGb:         DefaultRAMGb,
 		SSHPort:       DefaultSSHPort,

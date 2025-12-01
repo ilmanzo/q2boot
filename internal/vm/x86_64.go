@@ -48,7 +48,7 @@ func (vm *X86_64VM) GetNetworkArgs() []string {
 
 // GetGraphicalArgs returns arguments for graphical mode on x86_64
 func (vm *X86_64VM) GetGraphicalArgs() []string {
-	return []string{"-device", "virtio-vga-gl", "-display", "sdl,gl=on"}
+	return []string{"-device", "virtio-vga-gl", "-display", "gtk,gl=on"}
 }
 
 // GetNonGraphicalDisplayArgs returns display arguments for non-graphical mode on x86_64

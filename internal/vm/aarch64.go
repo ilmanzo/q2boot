@@ -55,7 +55,7 @@ func (vm *AARCH64VM) GetNetworkArgs() []string {
 
 // GetGraphicalArgs returns arguments for graphical mode on aarch64
 func (vm *AARCH64VM) GetGraphicalArgs() []string {
-	return []string{"-device", "virtio-gpu-pci", "-display", "sdl"}
+	return []string{"-device", "virtio-gpu-pci", "-display", "gtk"}
 }
 
 // GetNonGraphicalDisplayArgs returns display arguments for non-graphical mode on aarch64

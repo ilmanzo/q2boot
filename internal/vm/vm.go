@@ -5,6 +5,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"slices"
 	"strings"
 
 	"github.com/ilmanzo/q2boot/internal/config"
@@ -209,13 +210,19 @@ func (v *BaseVM) buildArgs(vm VM) []string {
 
 	// Handle display mode
 	if v.Graphical {
-		args = append(args, vm.GetGraphicalArgs()...)
+		graphicalArgs := vm.GetGraphicalArgs()
+		args = append(args, graphicalArgs...)
+		// If graphical mode is implemented via -nographic (e.g., for s390x),
+		// we must disable the default monitor to avoid stdio conflicts.
+		if slices.Contains(graphicalArgs, "-nographic") {
+			args = append(args, "-monitor", "none")
+		}
 	} else {
-		args = append(args, vm.GetNonGraphicalDisplayArgs()...)
+		nonGraphicalDisplayArgs := vm.GetNonGraphicalDisplayArgs()
+		args = append(args, nonGraphicalDisplayArgs...)
 		if !v.NoSnapshot {
 			args = append(args, SnapshotArgument)
 		}
-		args = append(args, "-serial", SerialConsoleStdio)
 	}
 
 	// Handle monitor configuration
@@ -223,8 +230,10 @@ func (v *BaseVM) buildArgs(vm VM) []string {
 		args = append(args, "-monitor", fmt.Sprintf("%s:%s:%d,server,nowait", MonitorProtocol, LocalhostAddress, v.MonitorPort))
 	} else if !v.Graphical {
 		// For console modes, disable the interactive monitor on stdio by default
-		// This prevents conflicts with the serial console
-		args = append(args, "-monitor", "none")
+		// unless it's already handled (e.g. for s390x).
+		if !slices.Contains(args, "-monitor") {
+			args = append(args, "-monitor", "none")
+		}
 	}
 	// For graphical modes, the default monitor is usually in the GUI window, which is fine.
 
