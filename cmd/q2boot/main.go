@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/ilmanzo/q2boot/internal/config"
+	"github.com/ilmanzo/q2boot/internal/logger"
 	"github.com/ilmanzo/q2boot/internal/vm"
 )
 
@@ -50,13 +51,13 @@ var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print version information",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("Q2Boot %s\n", version)
-		fmt.Printf("Git commit: %s\n", commit)
-		fmt.Printf("Build time: %s\n", buildTime)
-		fmt.Printf("Supported architectures: %v\n", vm.SupportedArchitectures())
+		logger.Info("Q2Boot version", "version", version)
+		logger.Info("Git commit", "commit", commit)
+		logger.Info("Build time", "time", buildTime)
+		logger.Info("Supported architectures", "archs", vm.SupportedArchitectures())
 
 		// Show QEMU binary availability
-		fmt.Println("\nQEMU Binary Availability:")
+		logger.Info("QEMU Binary Availability")
 		availability := vm.CheckAvailableQEMUBinaries()
 		for _, arch := range vm.SupportedArchitectures() {
 			status := "❌ Not Available"
@@ -64,25 +65,21 @@ var versionCmd = &cobra.Command{
 				status = "✅ Available"
 			}
 			binary, _ := vm.GetQEMUBinaryForArch(arch)
-			fmt.Printf("  %s (%s): %s\n", arch, binary, status)
+			logger.Info("Architecture", "arch", arch, "binary", binary, "status", status)
 		}
 
 		missing := vm.GetMissingQEMUBinaries()
 		if len(missing) > 0 {
-			fmt.Printf("\nTo install missing QEMU binaries:\n")
+			logger.Info("To install missing QEMU binaries")
 			for _, arch := range missing {
 				binary, _ := vm.GetQEMUBinaryForArch(arch)
-				fmt.Printf("  %s (%s):\n", arch, binary)
+				logger.Info("Missing binary", "arch", arch, "binary", binary)
 				instructions := vm.GetInstallationInstructions(binary)
-				// Indent each line of instructions
 				lines := strings.Split(instructions, "\n")
 				for _, line := range lines {
 					if line != "" {
-						fmt.Printf("    %s\n", line)
+						logger.Info("Instruction", "text", line)
 					}
-				}
-				if len(missing) > 1 {
-					fmt.Println()
 				}
 			}
 		}
@@ -141,8 +138,8 @@ func initConfig() {
 	}
 
 	// Create config directory if it doesn't exist
-	if err := os.MkdirAll(configDir, 0755); err != nil {
-		fmt.Fprintf(os.Stderr, "Error creating config directory: %v\n", err)
+	if err := os.MkdirAll(configDir, 0700); err != nil {
+		logger.Error("Error creating config directory", "path", configDir, "error", err)
 		return
 	}
 
@@ -165,19 +162,19 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
 			// Config file not found, create default
-			fmt.Printf("No config file found. Creating default config at '%s.json'\n", configFile)
+			logger.Info("No config file found. Creating default config", "path", configFile+".json")
 			if err := viper.WriteConfigAs(configFile + ".json"); err != nil {
-				fmt.Fprintf(os.Stderr, "Error creating config file: %v\n", err)
+				logger.Error("Error creating config file", "path", configFile+".json", "error", err)
 			}
 		} else {
-			fmt.Fprintf(os.Stderr, "Error reading config file: %v\n", err)
+			logger.Error("Error reading config file", "error", err)
 		}
 	}
 
 	// Create config struct
 	cfg = &config.VMConfig{}
 	if err := viper.Unmarshal(cfg); err != nil {
-		fmt.Fprintf(os.Stderr, "Error unmarshaling config: %v\n", err)
+		logger.Error("Error unmarshaling config", "error", err)
 		cfg = config.DefaultConfig()
 	}
 }
@@ -249,13 +246,16 @@ func runQ2BootE(cmd *cobra.Command, args []string, cfg *config.VMConfig) error {
 	virtualMachine.Configure(cfg)
 
 	// Run the VM
-	fmt.Printf("🚀 Starting %s VM...\n", cfg.Arch)
+	logger.Info("Starting VM", "arch", cfg.Arch)
 	return virtualMachine.Run()
 }
 
 func main() {
+	// Initialize logger
+	_ = logger.Initialize(logger.InfoLevel, "text")
+
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		logger.Error("Fatal error", "error", err)
 		os.Exit(1)
 	}
 }

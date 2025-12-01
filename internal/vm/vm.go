@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/ilmanzo/q2boot/internal/config"
+	"github.com/ilmanzo/q2boot/internal/logger"
 )
 
 // VM interface defines the methods that all VM implementations must provide
@@ -215,8 +216,8 @@ func (v *BaseVM) buildArgs(vm VM) []string {
 
 // RunVM executes the VM with the given binary and arguments
 func RunVM(binary string, args []string, confirm bool) error {
-	fmt.Printf("🚀 Starting QEMU with the following command:\n")
-	fmt.Printf("%s %s\n", binary, strings.Join(args, " "))
+	logger.Info("🚀 Starting QEMU with the following command:")
+	logger.Info("Command", "binary", binary, "args", strings.Join(args, " "))
 
 	if confirm {
 		fmt.Print("Press Enter to continue...")
@@ -232,8 +233,10 @@ func RunVM(binary string, args []string, confirm bool) error {
 	err := cmd.Run()
 	if err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
+			logger.Error("QEMU exited with error", "status", exitError.ExitCode())
 			return fmt.Errorf("QEMU exited with status %d", exitError.ExitCode())
 		}
+		logger.Error("Failed to start QEMU", "error", err)
 		return fmt.Errorf("failed to start QEMU: %w", err)
 	}
 
