@@ -62,7 +62,7 @@ func (vm *X86_64VM) BuildArgs() []string {
 	return vm.buildArgs(vm)
 }
 
-// Run executes the x86_64 VM
+// Run executes the VM
 func (vm *X86_64VM) Run() error {
-	return vm.run(vm)
+	return vm.RunVM(vm)
 }

@@ -99,7 +99,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&diskPath, "disk", "d", "", "Path to the disk image (required)")
 	rootCmd.PersistentFlags().IntVarP(&cpu, "cpu", "c", 0, "Number of CPU cores (default: 2)")
 	rootCmd.PersistentFlags().IntVarP(&ram, "ram", "r", 0, "Amount of RAM in GB (default: 2)")
-	rootCmd.PersistentFlags().StringVarP(&arch, "arch", "a", "x86_64", "CPU architecture (x86_64, aarch64, ppc64le, s390x, riscv)")
+	rootCmd.PersistentFlags().StringVarP(&arch, "arch", "a", "x86_64", "CPU architecture (x86_64, aarch64, ppc64le, s390x)")
 	rootCmd.PersistentFlags().Uint16VarP(&sshPort, "ssh-port", "p", 0, "Host port for SSH forwarding (default: 2222)")
 	rootCmd.PersistentFlags().StringVarP(&logFile, "log-file", "l", "", "Path to the log file (default: q2boot.log)")
 	rootCmd.PersistentFlags().BoolVarP(&graphical, "graphical", "g", false, "Enable graphical console (default: false)")
@@ -222,6 +222,11 @@ func runQ2BootE(cmd *cobra.Command, args []string, cfg *config.VMConfig) error {
 	// Validate configuration
 	if err := cfg.Validate(); err != nil {
 		return fmt.Errorf("configuration validation failed: %w", err)
+	}
+
+	// Validate port availability
+	if err := vm.ValidatePortsAvailable(cfg.SSHPort, cfg.MonitorPort); err != nil {
+		return err
 	}
 
 	// Validate architecture separately to avoid import cycle

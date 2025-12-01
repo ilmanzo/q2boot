@@ -479,3 +479,46 @@ func TestGetInstallationInstructions(t *testing.T) {
 		})
 	}
 }
+
+func TestIsPortAvailable(t *testing.T) {
+	// Test with port 0 (should be available)
+	if !IsPortAvailable(0) {
+		t.Error("Port 0 should be available")
+	}
+
+	// Test with a high port number that's unlikely to be in use
+	if !IsPortAvailable(65432) {
+		t.Error("Port 65432 should be available")
+	}
+}
+
+func TestValidatePortsAvailable(t *testing.T) {
+	tests := []struct {
+		name        string
+		sshPort     uint16
+		monitorPort uint16
+		shouldError bool
+	}{
+		{
+			name:        "valid available ports",
+			sshPort:     9999,
+			monitorPort: 9998,
+			shouldError: false,
+		},
+		{
+			name:        "monitor port disabled",
+			sshPort:     9997,
+			monitorPort: 0,
+			shouldError: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidatePortsAvailable(tt.sshPort, tt.monitorPort)
+			if (err != nil) != tt.shouldError {
+				t.Errorf("ValidatePortsAvailable() error = %v, shouldError %v", err, tt.shouldError)
+			}
+		})
+	}
+}

@@ -62,7 +62,7 @@ func (vm *PPC64LEVM) BuildArgs() []string {
 	return vm.buildArgs(vm)
 }
 
-// Run executes the ppc64le VM
+// Run executes the VM
 func (vm *PPC64LEVM) Run() error {
-	return vm.run(vm)
+	return vm.RunVM(vm)
 }

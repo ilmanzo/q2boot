@@ -70,7 +70,7 @@ func (vm *S390XVM) BuildArgs() []string {
 	return vm.buildArgs(vm)
 }
 
-// Run executes the s390x VM
+// Run executes the VM
 func (vm *S390XVM) Run() error {
-	return vm.run(vm)
+	return vm.RunVM(vm)
 }

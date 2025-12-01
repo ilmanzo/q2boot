@@ -69,7 +69,7 @@ func (vm *AARCH64VM) BuildArgs() []string {
 	return vm.buildArgs(vm)
 }
 
-// Run executes the aarch64 VM
+// Run executes the VM
 func (vm *AARCH64VM) Run() error {
-	return vm.run(vm)
+	return vm.RunVM(vm)
 }

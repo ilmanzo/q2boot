@@ -2,6 +2,7 @@ package vm
 
 import (
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"strings"
@@ -102,6 +103,12 @@ func (v *BaseVM) run(vm VM) error {
 	return RunVM(vm.QEMUBinary(), args, v.Confirm)
 }
 
+// RunVM executes the VM with the given binary and arguments
+// This is the common implementation for all architecture's Run() methods
+func (v *BaseVM) RunVM(vm VM) error {
+	return v.run(vm)
+}
+
 // GetInstallationInstructions returns architecture-specific installation instructions for a QEMU binary
 func GetInstallationInstructions(binary string) string {
 	var ubuntuPkg, suseArch, archPkg string
@@ -134,6 +141,29 @@ func ValidateQEMUBinary(binary string) error {
 		instructions := GetInstallationInstructions(binary)
 		return fmt.Errorf("QEMU binary '%s' not found in PATH. %s\nError: %v", binary, instructions, err)
 	}
+	return nil
+}
+
+// IsPortAvailable checks if a port is available for binding
+func IsPortAvailable(port uint16) bool {
+	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+	if err != nil {
+		return false
+	}
+	listener.Close()
+	return true
+}
+
+// ValidatePortsAvailable checks if the required ports (SSH and monitor) are available
+func ValidatePortsAvailable(sshPort, monitorPort uint16) error {
+	if !IsPortAvailable(sshPort) {
+		return fmt.Errorf("SSH port %d is already in use. Please choose a different port using --ssh-port", sshPort)
+	}
+
+	if monitorPort > 0 && !IsPortAvailable(monitorPort) {
+		return fmt.Errorf("monitor port %d is already in use. Please choose a different port using --monitor-port", monitorPort)
+	}
+
 	return nil
 }
 
