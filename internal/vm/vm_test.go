@@ -215,7 +215,7 @@ func TestPPC64LEVM(t *testing.T) {
 	}
 
 	archArgs := vm.GetArchArgs()
-	expectedArgs := []string{"-M", "pseries", "-cpu", "POWER9"}
+	expectedArgs := []string{"-M", "pseries", "-cpu", "power10"}
 	if len(archArgs) != len(expectedArgs) {
 		t.Errorf("Expected %d arch args, got %d", len(expectedArgs), len(archArgs))
 	}
