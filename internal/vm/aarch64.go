@@ -64,12 +64,12 @@ func (vm *AARCH64VM) GetNonGraphicalDisplayArgs() []string {
 	return []string{"-display", "curses"}
 }
 
-// BuildArgs builds the complete argument list for aarch64
-func (vm *AARCH64VM) BuildArgs() []string {
-	return vm.buildArgs(vm)
+// Validate checks the VM configuration and satisfies the VM interface.
+func (vm *AARCH64VM) Validate() error {
+	return vm.BaseVM.Validate(vm)
 }
 
-// Run executes the VM
+// Run executes the VM and satisfies the VM interface.
 func (vm *AARCH64VM) Run() error {
-	return vm.RunVM(vm)
+	return vm.run(vm)
 }

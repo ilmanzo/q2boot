@@ -57,12 +57,12 @@ func (vm *X86_64VM) GetNonGraphicalDisplayArgs() []string {
 	return []string{"-display", "curses"}
 }
 
-// BuildArgs builds the complete argument list for x86_64
-func (vm *X86_64VM) BuildArgs() []string {
-	return vm.buildArgs(vm)
+// Validate checks the VM configuration and satisfies the VM interface.
+func (vm *X86_64VM) Validate() error {
+	return vm.BaseVM.Validate(vm)
 }
 
-// Run executes the VM
+// Run executes the VM and satisfies the VM interface.
 func (vm *X86_64VM) Run() error {
-	return vm.RunVM(vm)
+	return vm.run(vm)
 }

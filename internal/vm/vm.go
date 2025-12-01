@@ -49,17 +49,14 @@ type VM interface {
 	// GetNonGraphicalDisplayArgs returns display arguments for non-graphical mode
 	GetNonGraphicalDisplayArgs() []string
 
-	// BuildArgs builds the complete QEMU command line arguments
-	BuildArgs() []string
-
-	// Run executes the virtual machine
-	Run() error
-
 	// Configure sets up the VM with the provided configuration
 	Configure(cfg *config.VMConfig)
 
 	// SetDiskPath sets the disk image path
 	SetDiskPath(path string)
+
+	Validate() error
+	Run() error
 }
 
 // BaseVM provides common functionality for all VM implementations
@@ -113,19 +110,6 @@ func (v *BaseVM) SetDiskPath(path string) {
 // Default implementation uses curses display
 func (v *BaseVM) GetNonGraphicalDisplayArgs() []string {
 	return []string{"-display", DisplayModeGraphical}
-}
-
-// run is a helper to execute the VM, containing logic common to all architectures.
-// It relies on the passed-in VM interface to get architecture-specific details.
-func (v *BaseVM) run(vm VM) error {
-	args := vm.BuildArgs()
-	return RunVM(vm.QEMUBinary(), args, v.Confirm)
-}
-
-// RunVM executes the VM with the given binary and arguments
-// This is the common implementation for all architecture's Run() methods
-func (v *BaseVM) RunVM(vm VM) error {
-	return v.run(vm)
 }
 
 // GetInstallationInstructions returns architecture-specific installation instructions for a QEMU binary
@@ -186,7 +170,26 @@ func ValidatePortsAvailable(sshPort, monitorPort uint16) error {
 	return nil
 }
 
-// buildArgs is a helper to build the QEMU command line arguments, containing
+// Validate checks the VM configuration for potential issues.
+func (v *BaseVM) Validate(vm VM) error {
+	// 1. Validate QEMU binary
+	if err := ValidateQEMUBinary(vm.QEMUBinary()); err != nil {
+		return err
+	}
+
+	// 2. Validate ports
+	if err := ValidatePortsAvailable(v.SSHPort, v.MonitorPort); err != nil {
+		return err
+	}
+
+	// 3. Validate disk path
+	if v.DiskPath == "" {
+		return fmt.Errorf("disk image path is not set")
+	}
+	return nil
+}
+
+// buildArgs builds the QEMU command line arguments, containing
 // logic common to all architectures. It relies on the passed-in VM interface to get
 // architecture-specific details.
 func (v *BaseVM) buildArgs(vm VM) []string {
@@ -238,6 +241,12 @@ func (v *BaseVM) buildArgs(vm VM) []string {
 	// For graphical modes, the default monitor is usually in the GUI window, which is fine.
 
 	return args
+}
+
+// run is a helper to execute the VM, containing logic common to all architectures.
+func (v *BaseVM) run(vm VM) error {
+	args := v.buildArgs(vm)
+	return RunVM(vm.QEMUBinary(), args, v.Confirm)
 }
 
 // RunVM executes the VM with the given binary and arguments

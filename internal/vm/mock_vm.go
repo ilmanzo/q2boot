@@ -5,7 +5,8 @@ import "github.com/ilmanzo/q2boot/internal/config"
 // MockVM is a mock implementation of the VM interface for testing.
 type MockVM struct {
 	*BaseVM
-	RunFunc func() error
+	RunFunc      func() error
+	ValidateFunc func() error
 }
 
 // NewMockVM creates a new MockVM instance.
@@ -45,15 +46,18 @@ func (m *MockVM) GetNonGraphicalDisplayArgs() []string {
 	return []string{"-display", "mock-headless"}
 }
 
-// BuildArgs is a mock implementation of the BuildArgs method.
-func (m *MockVM) BuildArgs() []string {
-	return []string{"-mock-arg"}
-}
-
 // Run is a mock implementation of the Run method.
 func (m *MockVM) Run() error {
 	if m.RunFunc != nil {
 		return m.RunFunc()
+	}
+	return nil
+}
+
+// Validate is a mock implementation of the Validate method.
+func (m *MockVM) Validate() error {
+	if m.ValidateFunc != nil {
+		return m.ValidateFunc()
 	}
 	return nil
 }

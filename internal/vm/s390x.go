@@ -65,12 +65,12 @@ func (vm *S390XVM) GetNonGraphicalDisplayArgs() []string {
 	return []string{"-nographic"}
 }
 
-// BuildArgs builds the complete argument list for s390x
-func (vm *S390XVM) BuildArgs() []string {
-	return vm.buildArgs(vm)
+// Validate checks the VM configuration and satisfies the VM interface.
+func (vm *S390XVM) Validate() error {
+	return vm.BaseVM.Validate(vm)
 }
 
-// Run executes the VM
+// Run executes the VM and satisfies the VM interface.
 func (vm *S390XVM) Run() error {
-	return vm.RunVM(vm)
+	return vm.run(vm)
 }
