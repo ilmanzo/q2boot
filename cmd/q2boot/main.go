@@ -14,6 +14,15 @@ import (
 	"github.com/ilmanzo/q2boot/internal/vm"
 )
 
+// Configuration directory constants
+const (
+	ConfigDirPermissions = 0700 // Owner read/write/execute only for security
+	ConfigDirName        = ".config"
+	AppConfigDirName     = "q2boot"
+	ConfigFileName       = "config"
+	ConfigFileFormat     = "json"
+)
+
 var (
 	// Version information - set by build flags
 	version   = "dev"
@@ -128,32 +137,32 @@ func initConfig() {
 
 	if testConfigDir != "" {
 		configDir = testConfigDir
-		configFile = filepath.Join(configDir, "config")
+		configFile = filepath.Join(configDir, ConfigFileName)
 	} else {
 		home, err := os.UserHomeDir()
 		cobra.CheckErr(err)
 
-		configDir = filepath.Join(home, ".config", "q2boot")
-		configFile = filepath.Join(configDir, "config")
+		configDir = filepath.Join(home, ConfigDirName, AppConfigDirName)
+		configFile = filepath.Join(configDir, ConfigFileName)
 	}
 
 	// Create config directory if it doesn't exist
-	if err := os.MkdirAll(configDir, 0700); err != nil {
+	if err := os.MkdirAll(configDir, ConfigDirPermissions); err != nil {
 		logger.Error("Error creating config directory", "path", configDir, "error", err)
 		return
 	}
 
 	// Configure viper
-	viper.SetConfigName("config")
-	viper.SetConfigType("json")
+	viper.SetConfigName(ConfigFileName)
+	viper.SetConfigType(ConfigFileFormat)
 	viper.AddConfigPath(configDir)
 
 	// Set defaults
 	viper.SetDefault("arch", "x86_64")
-	viper.SetDefault("cpu", 2)
-	viper.SetDefault("ram_gb", 2)
-	viper.SetDefault("ssh_port", 2222)
-	viper.SetDefault("log_file", "q2boot.log")
+	viper.SetDefault("cpu", config.DefaultCPU)
+	viper.SetDefault("ram_gb", config.DefaultRAMGb)
+	viper.SetDefault("ssh_port", config.DefaultSSHPort)
+	viper.SetDefault("log_file", config.DefaultLogFile)
 	viper.SetDefault("graphical", false)
 	viper.SetDefault("write_mode", false)
 	viper.SetDefault("confirm", false)
@@ -162,9 +171,9 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
 			// Config file not found, create default
-			logger.Info("No config file found. Creating default config", "path", configFile+".json")
-			if err := viper.WriteConfigAs(configFile + ".json"); err != nil {
-				logger.Error("Error creating config file", "path", configFile+".json", "error", err)
+			logger.Info("No config file found. Creating default config", "path", configFile+"."+ConfigFileFormat)
+			if err := viper.WriteConfigAs(configFile + "." + ConfigFileFormat); err != nil {
+				logger.Error("Error creating config file", "path", configFile+"."+ConfigFileFormat, "error", err)
 			}
 		} else {
 			logger.Error("Error reading config file", "error", err)

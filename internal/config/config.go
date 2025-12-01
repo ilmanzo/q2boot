@@ -5,6 +5,20 @@ import (
 	"os"
 )
 
+// Validation constants
+const (
+	MinCPU             = 1
+	MaxCPU             = 32
+	MinRAM             = 1
+	MaxRAM             = 128
+	MinPrivilegedPort  = 1024
+	DefaultCPU         = 2
+	DefaultRAMGb       = 2
+	DefaultSSHPort     = 2222
+	DefaultMonitorPort = 0 // 0 means disabled
+	DefaultLogFile     = "q2boot.log"
+)
+
 // VMConfig holds the configuration settings for the VM
 type VMConfig struct {
 	Arch          string `json:"arch" mapstructure:"arch"`
@@ -26,11 +40,11 @@ type VMConfig struct {
 func DefaultConfig() *VMConfig {
 	return &VMConfig{
 		Arch:          "x86_64",
-		CPU:           2,
-		RAMGb:         2,
-		SSHPort:       2222,
-		MonitorPort:   0, // Default to 0, meaning disabled
-		LogFile:       "q2boot.log",
+		CPU:           DefaultCPU,
+		RAMGb:         DefaultRAMGb,
+		SSHPort:       DefaultSSHPort,
+		MonitorPort:   DefaultMonitorPort, // Default to 0, meaning disabled
+		LogFile:       DefaultLogFile,
 		SerialLogPath: "",
 		WriteMode:     false,
 		Graphical:     false,
@@ -41,20 +55,20 @@ func DefaultConfig() *VMConfig {
 // Validate validates the configuration values
 // This provides domain-specific validation logic that Viper doesn't handle
 func (c *VMConfig) Validate() error {
-	if c.CPU < 1 || c.CPU > 32 {
-		return fmt.Errorf("CPU count must be between 1 and 32, got %d", c.CPU)
+	if c.CPU < MinCPU || c.CPU > MaxCPU {
+		return fmt.Errorf("CPU count must be between %d and %d, got %d", MinCPU, MaxCPU, c.CPU)
 	}
 
-	if c.RAMGb < 1 || c.RAMGb > 128 {
-		return fmt.Errorf("RAM must be between 1 and 128 GB, got %d", c.RAMGb)
+	if c.RAMGb < MinRAM || c.RAMGb > MaxRAM {
+		return fmt.Errorf("RAM must be between %d and %d GB, got %d", MinRAM, MaxRAM, c.RAMGb)
 	}
 
-	if c.SSHPort < 1024 {
-		return fmt.Errorf("SSH port must be >= 1024, got %d", c.SSHPort)
+	if c.SSHPort < MinPrivilegedPort {
+		return fmt.Errorf("SSH port must be >= %d, got %d", MinPrivilegedPort, c.SSHPort)
 	}
 
-	if c.MonitorPort != 0 && c.MonitorPort < 1024 {
-		return fmt.Errorf("monitor port must be >= 1024, got %d", c.MonitorPort)
+	if c.MonitorPort != 0 && c.MonitorPort < MinPrivilegedPort {
+		return fmt.Errorf("monitor port must be >= %d, got %d", MinPrivilegedPort, c.MonitorPort)
 	}
 
 	if c.DiskPath == "" {

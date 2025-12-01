@@ -11,6 +11,23 @@ import (
 	"github.com/ilmanzo/q2boot/internal/logger"
 )
 
+// VM configuration constants
+const (
+	DefaultCPUCount      = 2
+	DefaultRAMGB         = 2
+	DefaultSSHPort       = 2222
+	DefaultMonitorPort   = 0 // 0 means disabled
+	DefaultLogFile       = "q2boot.log"
+	LocalhostAddress     = "127.0.0.1"
+	TCPNetworkProtocol   = "tcp"
+	MonitorProtocol      = "telnet"
+	AudioDeviceID        = "snd0"
+	AudioDeviceType      = "none"
+	SnapshotArgument     = "-snapshot"
+	SerialConsoleStdio   = "stdio"
+	DisplayModeGraphical = "curses"
+)
+
 // VM interface defines the methods that all VM implementations must provide
 type VM interface {
 	// QEMUBinary returns the name of the QEMU binary for the specific architecture
@@ -60,11 +77,11 @@ type BaseVM struct {
 // NewBaseVM creates a new BaseVM with default settings
 func NewBaseVM() *BaseVM {
 	return &BaseVM{
-		CPU:         2,
-		RAM:         2,
-		SSHPort:     2222,
-		MonitorPort: 0,
-		LogFile:     "q2boot.log",
+		CPU:         DefaultCPUCount,
+		RAM:         DefaultRAMGB,
+		SSHPort:     DefaultSSHPort,
+		MonitorPort: DefaultMonitorPort,
+		LogFile:     DefaultLogFile,
 		Graphical:   false,
 		NoSnapshot:  false,
 		Confirm:     false,
@@ -94,7 +111,7 @@ func (v *BaseVM) SetDiskPath(path string) {
 // GetNonGraphicalDisplayArgs returns display arguments for non-graphical mode
 // Default implementation uses curses display
 func (v *BaseVM) GetNonGraphicalDisplayArgs() []string {
-	return []string{"-display", "curses"}
+	return []string{"-display", DisplayModeGraphical}
 }
 
 // run is a helper to execute the VM, containing logic common to all architectures.
@@ -147,7 +164,7 @@ func ValidateQEMUBinary(binary string) error {
 
 // IsPortAvailable checks if a port is available for binding
 func IsPortAvailable(port uint16) bool {
-	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+	listener, err := net.Listen(TCPNetworkProtocol, fmt.Sprintf("%s:%d", LocalhostAddress, port))
 	if err != nil {
 		return false
 	}
@@ -188,7 +205,7 @@ func (v *BaseVM) buildArgs(vm VM) []string {
 	args = append(args, vm.GetNetworkArgs()...)
 
 	// Add audio device (disabled)
-	args = append(args, "-audiodev", "none,id=snd0")
+	args = append(args, "-audiodev", fmt.Sprintf("%s,id=%s", AudioDeviceType, AudioDeviceID))
 
 	// Handle display mode
 	if v.Graphical {
@@ -196,14 +213,14 @@ func (v *BaseVM) buildArgs(vm VM) []string {
 	} else {
 		args = append(args, vm.GetNonGraphicalDisplayArgs()...)
 		if !v.NoSnapshot {
-			args = append(args, "-snapshot")
+			args = append(args, SnapshotArgument)
 		}
-		args = append(args, "-serial", "stdio")
+		args = append(args, "-serial", SerialConsoleStdio)
 	}
 
 	// Handle monitor configuration
 	if v.MonitorPort > 0 {
-		args = append(args, "-monitor", fmt.Sprintf("telnet:127.0.0.1:%d,server,nowait", v.MonitorPort))
+		args = append(args, "-monitor", fmt.Sprintf("%s:%s:%d,server,nowait", MonitorProtocol, LocalhostAddress, v.MonitorPort))
 	} else if !v.Graphical {
 		// For console modes, disable the interactive monitor on stdio by default
 		// This prevents conflicts with the serial console
