@@ -3,7 +3,7 @@
 package main
 
 import (
-	"fmt"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -16,7 +16,7 @@ import (
 
 // setupTest re-initializes the command and configuration for each test run,
 // ensuring test isolation.
-func setupTest(t *testing.T) {
+func setupTest() {
 	// Reset the root command and its flags to a clean state
 	rootCmd = &cobra.Command{
 		Use:  "q2boot [flags] <disk_image_path>",
@@ -29,7 +29,7 @@ func setupTest(t *testing.T) {
 	initConfig()
 }
 func TestDefaultArchitecture(t *testing.T) {
-	setupTest(t)
+	setupTest()
 
 	// Use a mock VM creator to prevent actual QEMU execution
 	originalCreator := vm.CreateVM
@@ -43,7 +43,7 @@ func TestDefaultArchitecture(t *testing.T) {
 	expectedErr := "detection failed"
 	detector.DetectArchitecture = func(diskPath string) (string, error) {
 		// Simulate a failed detection
-		return "", fmt.Errorf(expectedErr)
+		return "", errors.New(expectedErr)
 	}
 	defer func() { detector.DetectArchitecture = originalDetector }()
 
@@ -68,7 +68,7 @@ func TestDefaultArchitecture(t *testing.T) {
 }
 
 func TestFlagOverridesConfig(t *testing.T) {
-	setupTest(t)
+	setupTest()
 
 	// 1. Create a temporary config file with specific values
 	tempDir, err := os.MkdirTemp("", "q2boot-test-config")
