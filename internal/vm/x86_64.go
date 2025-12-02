@@ -52,9 +52,13 @@ func (vm *X86_64VM) GetGraphicalArgs() []string {
 }
 
 // GetNonGraphicalDisplayArgs returns display arguments for non-graphical mode on x86_64
-// x86_64 uses the default curses display for headless mode
+// For non-graphical mode, we disable the display and redirect the serial console.
 func (vm *X86_64VM) GetNonGraphicalDisplayArgs() []string {
-	return []string{"-display", "curses"}
+	return []string{
+		"-nographic",
+		"-serial",
+		"mon:stdio",
+	}
 }
 
 // Validate checks the VM configuration and satisfies the VM interface.

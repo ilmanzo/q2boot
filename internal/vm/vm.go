@@ -61,15 +61,16 @@ type VM interface {
 
 // BaseVM provides common functionality for all VM implementations
 type BaseVM struct {
-	DiskPath    string
-	CPU         int
-	RAM         int
-	Graphical   bool
-	NoSnapshot  bool
-	Confirm     bool
-	SSHPort     uint16
-	MonitorPort uint16
-	LogFile     string
+	DiskPath     string
+	CPU          int
+	RAM          int
+	Graphical    bool
+	NoSnapshot   bool
+	Confirm      bool
+	SSHPort      uint16
+	MonitorPort  uint16
+	LogFile      string
+	FirmwarePath string
 }
 
 // NewBaseVM creates a new BaseVM with default settings
@@ -230,11 +231,14 @@ func (v *BaseVM) buildArgs(vm VM) []string {
 
 	// Handle monitor configuration
 	if v.MonitorPort > 0 {
-		args = append(args, "-monitor", fmt.Sprintf("%s:%s:%d,server,nowait", MonitorProtocol, LocalhostAddress, v.MonitorPort))
+		// If mon:stdio is already in use, don't add a separate monitor.
+		if !slices.Contains(args, "mon:stdio") {
+			args = append(args, "-monitor", fmt.Sprintf("%s:%s:%d,server,nowait", MonitorProtocol, LocalhostAddress, v.MonitorPort))
+		}
 	} else if !v.Graphical {
 		// For console modes, disable the interactive monitor on stdio by default
 		// unless it's already handled (e.g. for s390x).
-		if !slices.Contains(args, "-monitor") {
+		if !slices.Contains(args, "-monitor") && !slices.Contains(args, "mon:stdio") {
 			args = append(args, "-monitor", "none")
 		}
 	}

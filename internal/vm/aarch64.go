@@ -2,6 +2,7 @@ package vm
 
 import (
 	"fmt"
+	"os"
 )
 
 // AARCH64VM implements VM for aarch64 architecture
@@ -9,11 +10,28 @@ type AARCH64VM struct {
 	*BaseVM
 }
 
+// aarch64 UEFI firmware paths
+var aavmfCodePaths = []string{
+	"/usr/share/qemu/aavmf-aarch64-code.bin", // SUSE
+	"/usr/share/AAVMF/AAVMF_CODE.fd",         // Debian/Ubuntu
+}
+
 // NewAARCH64VM creates a new AARCH64VM instance
 func NewAARCH64VM() *AARCH64VM {
-	return &AARCH64VM{
+	vm := &AARCH64VM{
 		BaseVM: NewBaseVM(),
 	}
+
+	// Set default firmware path if not already set
+	if vm.FirmwarePath == "" {
+		for _, path := range aavmfCodePaths {
+			if _, err := os.Stat(path); err == nil {
+				vm.FirmwarePath = path
+				break
+			}
+		}
+	}
+	return vm
 }
 
 // QEMUBinary returns the QEMU binary name for aarch64
@@ -23,14 +41,33 @@ func (vm *AARCH64VM) QEMUBinary() string {
 
 // GetArchArgs returns architecture-specific arguments for aarch64
 func (vm *AARCH64VM) GetArchArgs() []string {
-	// This requires a UEFI firmware file. A common path is provided.
-	// Users might need to install it via their package manager
-	// (e.g., qemu-efi-aarch64 on Debian/Ubuntu).
-	return []string{
-		"-machine", "virt",
-		"-cpu", "max",
-		"-bios", "/usr/share/qemu/aavmf-aarch64-code.bin",
+	args := []string{"-M", "virt", "-cpu", "max"}
+
+	if vm.FirmwarePath != "" {
+		// The variable store needs to be the same size as the code store.
+		firmwareInfo, err := os.Stat(vm.FirmwarePath)
+		if err != nil {
+			// If we can't stat the firmware, we can't proceed with pflash.
+			// This should be caught by other validations, but we'll be safe.
+			return args
+		}
+
+		// Create a temporary file for UEFI variables.
+		varsFile, err := os.CreateTemp("", "q2boot-aavmf-vars-*.fd")
+		if err == nil {
+			// Resize the empty file to match the firmware size.
+			varsFile.Truncate(firmwareInfo.Size())
+			varsFile.Close() // Close the file handle.
+
+			// QEMU needs two pflash devices for UEFI: one for code (readonly) and one for vars.
+			args = append(args,
+				"-drive", fmt.Sprintf("if=pflash,format=raw,readonly=on,file=%s", vm.FirmwarePath),
+				"-drive", fmt.Sprintf("if=pflash,format=raw,file=%s", varsFile.Name()),
+			)
+		}
 	}
+
+	return args
 }
 
 // GetDiskArgs returns disk-specific arguments for aarch64
@@ -55,13 +92,17 @@ func (vm *AARCH64VM) GetNetworkArgs() []string {
 
 // GetGraphicalArgs returns arguments for graphical mode on aarch64
 func (vm *AARCH64VM) GetGraphicalArgs() []string {
-	return []string{"-device", "virtio-gpu-pci", "-display", "gtk"}
+	return []string{"-device", "virtio-vga-gl", "-display", "gtk,gl=on"}
 }
 
 // GetNonGraphicalDisplayArgs returns display arguments for non-graphical mode on aarch64
-// aarch64 uses the default curses display for headless mode
+// For non-graphical mode, we disable the display and redirect the serial console.
 func (vm *AARCH64VM) GetNonGraphicalDisplayArgs() []string {
-	return []string{"-display", "curses"}
+	return []string{
+		"-nographic",
+		"-serial",
+		"mon:stdio",
+	}
 }
 
 // Validate checks the VM configuration and satisfies the VM interface.
