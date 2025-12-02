@@ -131,16 +131,6 @@ info:
 	@echo "  Build Time: $(BUILD_TIME)"
 	@echo "  Go Version: $(GO_VERSION)"
 
-# Create a simple disk image for testing (requires qemu-img)
-create-test-disk:
-	@echo "Creating test disk image..."
-	@if command -v qemu-img >/dev/null 2>&1; then \
-		qemu-img create -f qcow2 test-disk.img 1G; \
-		echo "Test disk created: test-disk.img"; \
-	else \
-		echo "qemu-img not found. Please install QEMU tools."; \
-	fi
-
 # Show help
 help:
 	@echo "Available targets:"
@@ -161,12 +151,5 @@ help:
 	@echo "  uninstall      Remove binary from /usr/local/bin"
 	@echo "  clean          Clean build artifacts"
 	@echo "  info           Show project information"
-	@echo "  create-test-disk  Create a test disk image"
 	@echo "  help           Show this help message"
 	@echo ""
-	@echo "Examples:"
-	@echo "  make build"
-	@echo "  make run DISK=ubuntu.img"
-	@echo "  make run DISK=test.img ARGS='-g -c 4 -r 8'"
-	@echo "  make test"
-	@echo "  make install"

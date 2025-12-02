@@ -35,6 +35,7 @@ Before you begin, ensure you have:
 - Git for version control
 - Make (for build automation)
 - QEMU installed for testing (optional but recommended)
+- `guestfs-tools` (or `libguestfs-tools`) for testing architecture auto-detection
 - Basic understanding of Go programming language
 
 ### Fork and Clone
