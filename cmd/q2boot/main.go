@@ -105,9 +105,14 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	// Add subcommands
+	setupFlags()
+}
+
+// setupFlags defines and binds all command-line flags.
+// It's a separate function to allow re-initialization during testing.
+func setupFlags() {
 	rootCmd.AddCommand(versionCmd)
 
-	// Define command line flags
 	rootCmd.PersistentFlags().IntVarP(&flags.CPU, "cpu", "c", 0, "Number of CPU cores (default: 2)")
 	rootCmd.PersistentFlags().IntVarP(&flags.RAM, "ram", "r", 0, "Amount of RAM in GB (default: 2)")
 	rootCmd.PersistentFlags().StringVarP(&flags.Arch, "arch", "a", "", "CPU architecture (x86_64, aarch64, ppc64le, s390x). Auto-detected from disk image if not specified")
@@ -271,16 +276,16 @@ func runQ2BootE(cmd *cobra.Command, args []string, cfg *config.VMConfig) error {
 	// Create VM based on architecture
 	virtualMachine, err := vm.CreateVM(cfg.Arch)
 	if err != nil {
-		return fmt.Errorf("failed to create VM: %w", err)
-	}
-
-	// Validate QEMU binary availability using the VM's specific binary
-	if err := vm.ValidateQEMUBinary(virtualMachine.QEMUBinary()); err != nil {
-		return fmt.Errorf("QEMU validation failed: %w", err)
+		return err
 	}
 
 	// Configure the VM
 	virtualMachine.Configure(cfg)
+
+	// Validate the configured VM (this will include QEMU binary checks)
+	if err := virtualMachine.Validate(); err != nil {
+		return fmt.Errorf("VM validation failed: %w", err)
+	}
 
 	// Run the VM
 	logger.Info("Starting VM", "arch", cfg.Arch)

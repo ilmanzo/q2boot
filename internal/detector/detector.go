@@ -15,7 +15,7 @@ var SupportedArchitectures = []string{"x86_64", "aarch64", "ppc64le", "s390x"}
 // DetectArchitecture attempts to detect the architecture from a disk image.
 // It tries multiple detection methods in order of reliability.
 // Returns the detected architecture or an error if detection fails.
-func DetectArchitecture(diskPath string) (string, error) {
+var DetectArchitecture = func(diskPath string) (string, error) {
 	if diskPath == "" {
 		return "", fmt.Errorf("disk path is empty")
 	}

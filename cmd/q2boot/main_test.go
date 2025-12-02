@@ -3,66 +3,73 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
-	"github.com/ilmanzo/q2boot/internal/config"
+	"github.com/ilmanzo/q2boot/internal/detector"
 	"github.com/ilmanzo/q2boot/internal/vm"
 	"github.com/spf13/cobra"
 )
 
+// setupTest re-initializes the command and configuration for each test run,
+// ensuring test isolation.
+func setupTest(t *testing.T) {
+	// Reset the root command and its flags to a clean state
+	rootCmd = &cobra.Command{
+		Use:  "q2boot [flags] <disk_image_path>",
+		Args: cobra.ExactArgs(1),
+		RunE: runQ2Boot,
+	}
+	// Re-run the flag setup to define all persistent flags on the new command
+	setupFlags()
+	// Reset the global config object
+	initConfig()
+}
 func TestDefaultArchitecture(t *testing.T) {
-	// Create a temporary file to act as a disk image
-	tempDir, err := os.MkdirTemp("", "q2boot-test")
-	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
-
-	tempFile := filepath.Join(tempDir, "test.img")
-	if err := os.WriteFile(tempFile, []byte("test"), 0644); err != nil {
-		t.Fatalf("Failed to create temp file: %v", err)
-	}
+	setupTest(t)
 
 	// Use a mock VM creator to prevent actual QEMU execution
 	originalCreator := vm.CreateVM
 	vm.CreateVM = func(arch string) (vm.VM, error) {
-		// We can return a mock that does nothing on Run()
 		return vm.NewMockVM(), nil
 	}
 	defer func() { vm.CreateVM = originalCreator }()
 
-	// We need to mock the final Run() to avoid executing QEMU
-	// For this test, we'll create a custom run function that just checks the config.
-	testCfg := config.DefaultConfig()
+	// Mock architecture detection to avoid running virt-cat in unit tests
+	originalDetector := detector.DetectArchitecture
+	expectedErr := "detection failed"
+	detector.DetectArchitecture = func(diskPath string) (string, error) {
+		// Simulate a failed detection
+		return "", fmt.Errorf(expectedErr)
+	}
+	defer func() { detector.DetectArchitecture = originalDetector }()
 
-	// This is our testable "run" function that will be executed by the command.
-	// It captures the final state of the configuration.
-	testRunE := func(cmd *cobra.Command, args []string) error {
-		// The core logic from main.go is now in runQ2BootE
-		// We pass our test config to it.
-		return runQ2BootE(cmd, args, testCfg)
+	// Create a dummy disk file
+	tempFile := filepath.Join(t.TempDir(), "test.img")
+	if err := os.WriteFile(tempFile, []byte("test"), 0644); err != nil {
+		t.Fatalf("Failed to create temp file: %v", err)
 	}
 
-	// Temporarily replace the command's RunE function with our test function
-	originalRunE := rootCmd.RunE
-	rootCmd.RunE = testRunE
-	defer func() { rootCmd.RunE = originalRunE }()
-
-	// Execute the root command with the disk path as a positional argument
 	rootCmd.SetArgs([]string{tempFile})
 
-	// We only care about the config validation part, so we ignore the QEMU execution error
-	_ = rootCmd.Execute()
+	// Execute the command and expect an error
+	err := rootCmd.Execute()
+	if err == nil {
+		t.Fatal("Expected an error due to failed architecture detection, but got nil")
+	}
 
-	// Architecture is now empty by default (triggers auto-detection)
-	if testCfg.Arch != "" {
-		t.Errorf("Expected architecture to default to '' (auto-detect), but got '%s'", testCfg.Arch)
+	// Check if the error is the one we expect from our mock
+	if !strings.Contains(err.Error(), expectedErr) {
+		t.Errorf("Expected error to contain '%s', but got: %v", expectedErr, err)
 	}
 }
 
 func TestFlagOverridesConfig(t *testing.T) {
+	setupTest(t)
+
 	// 1. Create a temporary config file with specific values
 	tempDir, err := os.MkdirTemp("", "q2boot-test-config")
 	if err != nil {
@@ -95,8 +102,10 @@ func TestFlagOverridesConfig(t *testing.T) {
 	// Use a mock VM creator to prevent actual QEMU execution
 	originalCreator := vm.CreateVM
 	vm.CreateVM = func(arch string) (vm.VM, error) {
-		// We can return a mock that does nothing on Run()
-		return vm.NewMockVM(), nil
+		// Return a mock that bypasses QEMU binary validation
+		mock := vm.NewMockVM()
+		mock.ValidateFunc = func() error { return nil }
+		return mock, nil
 	}
 	defer func() { vm.CreateVM = originalCreator }()
 
@@ -115,7 +124,8 @@ func TestFlagOverridesConfig(t *testing.T) {
 	// 3. Execute with flags that override the config file
 	rootCmd.SetArgs([]string{
 		tempDisk,
-		"--arch", "ppc64le", // Override "aarch64"
+		// Use s390x to match the test output log, ensuring consistency.
+		"--arch", "s390x", // Override "aarch64"
 		"--cpu", "4", // Override 8
 		"--ram", "8", // Override 16
 		"--ssh-port", "4444", // Override 3333
@@ -126,8 +136,8 @@ func TestFlagOverridesConfig(t *testing.T) {
 	_ = rootCmd.Execute()
 
 	// 4. Assert that flag values were used
-	if cfg.Arch != "ppc64le" {
-		t.Errorf("Expected arch to be 'ppc64le' from flag, but got '%s'", cfg.Arch)
+	if cfg.Arch != "s390x" {
+		t.Errorf("Expected arch to be 's390x' from flag, but got '%s'", cfg.Arch)
 	}
 	if cfg.CPU != 4 {
 		t.Errorf("Expected cpu to be 4 from flag, but got %d", cfg.CPU)

@@ -63,7 +63,7 @@ func (m *MockVM) Validate() error {
 	if m.ValidateFunc != nil {
 		return m.ValidateFunc()
 	}
-	return nil
+	return m.BaseVM.Validate(m)
 }
 
 // Configure is a mock implementation of the Configure method.
