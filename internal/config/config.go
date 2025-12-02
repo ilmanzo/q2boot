@@ -21,17 +21,18 @@ const (
 
 // VMConfig holds the configuration settings for the VM
 type VMConfig struct {
-	Arch          string `json:"arch" mapstructure:"arch"`
-	CPU           int    `json:"cpu" mapstructure:"cpu"`
-	RAMGb         int    `json:"ram_gb" mapstructure:"ram_gb"`
-	SSHPort       uint16 `json:"ssh_port" mapstructure:"ssh_port"`
-	MonitorPort   uint16 `json:"monitor_port" mapstructure:"monitor_port"`
-	LogFile       string `json:"log_file" mapstructure:"log_file"`
-	SerialLogPath string `json:"serial_log_path" mapstructure:"serial_log_path"`
-	WriteMode     bool   `json:"write_mode" mapstructure:"write_mode"`
-	Graphical     bool   `json:"graphical" mapstructure:"graphical"`
-	Confirm       bool   `json:"confirm" mapstructure:"confirm"`
-	DiskPath      string `json:"disk_path,omitempty" mapstructure:"disk_path"`
+	Arch          string   `json:"arch" mapstructure:"arch"`
+	CPU           int      `json:"cpu" mapstructure:"cpu"`
+	RAMGb         int      `json:"ram_gb" mapstructure:"ram_gb"`
+	SSHPort       uint16   `json:"ssh_port" mapstructure:"ssh_port"`
+	MonitorPort   uint16   `json:"monitor_port" mapstructure:"monitor_port"`
+	LogFile       string   `json:"log_file" mapstructure:"log_file"`
+	SerialLogPath string   `json:"serial_log_path" mapstructure:"serial_log_path"`
+	WriteMode     bool     `json:"write_mode" mapstructure:"write_mode"`
+	Graphical     bool     `json:"graphical" mapstructure:"graphical"`
+	Confirm       bool     `json:"confirm" mapstructure:"confirm"`
+	DiskPath      string   `json:"disk_path,omitempty" mapstructure:"disk_path"`
+	ExtraQemuArgs []string `json:"extra_qemu_args,omitempty" mapstructure:"extra_qemu_args"`
 }
 
 // DefaultConfig creates a default configuration

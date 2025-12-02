@@ -26,15 +26,16 @@ const (
 
 // Flags holds all command-line flag values
 type Flags struct {
-	CPU         int
-	RAM         int
-	Arch        string
-	SSHPort     uint16
-	MonitorPort uint16
-	LogFile     string
-	Graphical   bool
-	WriteMode   bool
-	Confirm     bool
+	CPU           int
+	RAM           int
+	Arch          string
+	SSHPort       uint16
+	MonitorPort   uint16
+	LogFile       string
+	Graphical     bool
+	WriteMode     bool
+	Confirm       bool
+	ExtraQemuArgs []string
 }
 
 var (
@@ -57,7 +58,9 @@ var rootCmd = &cobra.Command{
 	Long: `Q2Boot is a command-line tool that wraps QEMU to provide a streamlined
 experience for launching virtual machines. It automatically configures common
 settings like KVM acceleration, virtio drivers, and networking while allowing
-customization through both configuration files and command-line options.`,
+customization through both configuration files and command-line options.
+
+For advanced use cases, you can pass custom arguments directly to QEMU using the -qemu-extra flag.`,
 	Args: cobra.ExactArgs(1), // Expect exactly one argument: the disk image path
 	RunE: runQ2Boot,
 }
@@ -122,6 +125,7 @@ func setupFlags() {
 	rootCmd.PersistentFlags().BoolVarP(&flags.WriteMode, "write-mode", "w", false, "Enable write mode (changes are saved to disk) (default: false)")
 	rootCmd.PersistentFlags().BoolVar(&flags.Confirm, "confirm", false, "Show command and wait for keypress before starting (default: false)")
 	rootCmd.PersistentFlags().Uint16VarP(&flags.MonitorPort, "monitor-port", "m", 0, "Port for the QEMU monitor (telnet)")
+	rootCmd.PersistentFlags().StringSliceVarP(&flags.ExtraQemuArgs, "qemu-extra", "e", []string{}, "Extra arguments to pass to QEMU (can be specified multiple times)")
 
 	// Bind flags to viper
 	viper.BindPFlag("cpu", rootCmd.PersistentFlags().Lookup("cpu"))
@@ -133,6 +137,7 @@ func setupFlags() {
 	viper.BindPFlag("write_mode", rootCmd.PersistentFlags().Lookup("write-mode"))
 	viper.BindPFlag("confirm", rootCmd.PersistentFlags().Lookup("confirm"))
 	viper.BindPFlag("monitor_port", rootCmd.PersistentFlags().Lookup("monitor-port"))
+	viper.BindPFlag("extra_qemu_args", rootCmd.PersistentFlags().Lookup("qemu-extra"))
 }
 
 // testConfigDir is used by tests to override the default config location.
@@ -172,6 +177,7 @@ func initConfig() {
 	viper.SetDefault("graphical", false)
 	viper.SetDefault("write_mode", false)
 	viper.SetDefault("confirm", false)
+	viper.SetDefault("extra_qemu_args", []string{})
 
 	// Read config file
 	if err := viper.ReadInConfig(); err != nil {
@@ -228,6 +234,9 @@ func applyFlagOverrides(cmd *cobra.Command, f *Flags, cfg *config.VMConfig, disk
 	}
 	if cmd.Flags().Changed("monitor-port") {
 		cfg.MonitorPort = f.MonitorPort
+	}
+	if len(f.ExtraQemuArgs) > 0 {
+		cfg.ExtraQemuArgs = f.ExtraQemuArgs
 	}
 }
 

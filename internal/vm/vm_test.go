@@ -607,7 +607,7 @@ func TestBuildArgs(t *testing.T) {
 			}
 
 			// Build the args
-			args := vm.buildArgs(vm)
+			args := vm.buildArgs(vm, nil)
 			argsStr := " " + strings.Join(args, " ") + " "
 
 			// Check for wanted arguments
@@ -625,5 +625,20 @@ func TestBuildArgs(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestBuildArgsWithExtraArgs(t *testing.T) {
+	vm := NewMockVM()
+	extraArgs := []string{"-foo", "bar", "-baz"}
+	vm.ExtraQemuArgs = extraArgs
+
+	args := vm.buildArgs(vm, nil)
+	argsStr := " " + strings.Join(args, " ") + " "
+
+	for _, extraArg := range extraArgs {
+		if !strings.Contains(argsStr, " "+extraArg+" ") {
+			t.Errorf("buildArgs() output missing expected extra argument: %s\nGot: %s", extraArg, argsStr)
+		}
 	}
 }

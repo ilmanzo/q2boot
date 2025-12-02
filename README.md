@@ -83,7 +83,8 @@ q2boot disk.img --confirm
 | `--graphical` | `-g` | Enable graphical console | false |
 | `--write-mode` | `-w` | Persist changes to disk (disables snapshot) | false |
 | `--ssh-port` | `-p` | Host port for SSH forwarding | 2222 |
-| `--monitor-port` | | Port for the QEMU monitor (telnet) | disabled |
+| `--monitor-port` | `-m` | Port for the QEMU monitor (telnet) | disabled |
+| `--qemu-extra` | `-e` | Extra arguments to pass to QEMU | |
 | `--log-file` | `-l` | Serial console log file | `q2boot.log` |
 | `--confirm` | | Show command and wait for keypress before starting | false |
 | `--help` | `-h` | Show help message | - |
@@ -125,6 +126,19 @@ q2boot test-image.img
 
 # Persistent headless server
 q2boot server.img -w --ssh-port 2223
+```
+
+### Advanced Usage
+
+For advanced use cases, you can pass custom arguments directly to QEMU using the `--qemu-extra` (or `-e`) flag. This is useful for enabling experimental features or using devices not configured by default.
+
+```bash
+# Pass custom arguments to enable a vhost-user-fs device
+q2boot my-vm.img \
+  -e '-chardev' \
+  -e 'socket,id=char0,path=/tmp/vhost-fs.sock' \
+  -e '-device' \
+  -e 'vhost-user-fs-pci,chardev=char0,tag=myfs'
 ```
 
 ### SSH Access
