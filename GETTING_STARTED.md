@@ -7,6 +7,7 @@ This guide will help you get up and running with Q2Boot in just a few minutes.
 Before you start, make sure you have:
 - Go 1.21 or later installed
 - QEMU installed and available in your PATH
+- `guestfs-tools` (or `libguestfs-tools` on some systems) for architecture auto-detection
 - A disk image to boot (or we'll create one for testing)
 
 ## Quick Installation
