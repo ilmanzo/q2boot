@@ -61,16 +61,17 @@ type VM interface {
 
 // BaseVM provides common functionality for all VM implementations
 type BaseVM struct {
-	DiskPath     string
-	CPU          int
-	RAM          int
-	Graphical    bool
-	NoSnapshot   bool
-	Confirm      bool
-	SSHPort      uint16
-	MonitorPort  uint16
-	LogFile      string
-	FirmwarePath string
+	DiskPath      string
+	CPU           int
+	RAM           int
+	Graphical     bool
+	NoSnapshot    bool
+	Confirm       bool
+	SSHPort       uint16
+	MonitorPort   uint16
+	LogFile       string
+	FirmwarePath  string
+	ExtraQemuArgs []string
 }
 
 // NewBaseVM creates a new BaseVM with default settings
@@ -100,6 +101,7 @@ func (v *BaseVM) Configure(cfg *config.VMConfig) {
 	if cfg.DiskPath != "" {
 		v.DiskPath = cfg.DiskPath
 	}
+	v.ExtraQemuArgs = cfg.ExtraQemuArgs
 }
 
 // SetDiskPath sets the disk image path
@@ -193,7 +195,7 @@ func (v *BaseVM) Validate(vm VM) error {
 // buildArgs builds the QEMU command line arguments, containing
 // logic common to all architectures. It relies on the passed-in VM interface to get
 // architecture-specific details.
-func (v *BaseVM) buildArgs(vm VM) []string {
+func (v *BaseVM) buildArgs(vm VM, extraArgs []string) []string {
 	var args []string
 
 	// Add architecture-specific arguments
@@ -208,6 +210,16 @@ func (v *BaseVM) buildArgs(vm VM) []string {
 
 	// Add network arguments
 	args = append(args, vm.GetNetworkArgs()...)
+
+	// Add any extra arguments (e.g., for cloud-init)
+	if extraArgs != nil {
+		args = append(args, extraArgs...)
+	}
+
+	// Append user-provided extra QEMU arguments
+	if len(v.ExtraQemuArgs) > 0 {
+		args = append(args, v.ExtraQemuArgs...)
+	}
 
 	// Add audio device (disabled)
 	args = append(args, "-audiodev", fmt.Sprintf("%s,id=%s", AudioDeviceType, AudioDeviceID))
@@ -249,11 +261,12 @@ func (v *BaseVM) buildArgs(vm VM) []string {
 
 // run is a helper to execute the VM, containing logic common to all architectures.
 func (v *BaseVM) run(vm VM) error {
-	args := v.buildArgs(vm)
+	args := v.buildArgs(vm, nil)
 	return RunVM(vm.QEMUBinary(), args, v.Confirm)
 }
 
-// RunVM executes the VM with the given binary and arguments
+// RunVM executes the VM with the given binary and arguments.
+// The cleanup function is optional and will be called if the VM exits.
 func RunVM(binary string, args []string, confirm bool) error {
 	logger.Info("🚀 Starting QEMU with the following command:")
 	logger.Info("Command", "binary", binary, "args", strings.Join(args, " "))
