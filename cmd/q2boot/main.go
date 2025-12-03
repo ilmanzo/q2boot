@@ -115,6 +115,7 @@ func init() {
 // It's a separate function to allow re-initialization during testing.
 func setupFlags() {
 	rootCmd.AddCommand(versionCmd)
+	rootCmd.AddCommand(NewCheckCmd())
 
 	rootCmd.PersistentFlags().IntVarP(&flags.CPU, "cpu", "c", 0, "Number of CPU cores (default: 2)")
 	rootCmd.PersistentFlags().IntVarP(&flags.RAM, "ram", "r", 0, "Amount of RAM in GB (default: 2)")
