@@ -54,10 +54,11 @@ func (vm *X86_64VM) GetGraphicalArgs() []string {
 // GetNonGraphicalDisplayArgs returns display arguments for non-graphical mode on x86_64
 // For non-graphical mode, we disable the display and redirect the serial console.
 func (vm *X86_64VM) GetNonGraphicalDisplayArgs() []string {
+	if vm.LogFile != "" {
+		return []string{"-nographic"}
+	}
 	return []string{
-		"-nographic",
-		"-serial",
-		"mon:stdio",
+		"-nographic", "-serial", "mon:stdio",
 	}
 }
 

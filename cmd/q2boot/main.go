@@ -11,7 +11,6 @@ import (
 
 	"github.com/ilmanzo/q2boot/internal/config"
 	"github.com/ilmanzo/q2boot/internal/detector"
-	"github.com/ilmanzo/q2boot/internal/logger"
 	"github.com/ilmanzo/q2boot/internal/vm"
 )
 
@@ -69,13 +68,13 @@ var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print version information",
 	Run: func(cmd *cobra.Command, args []string) {
-		logger.Info("Q2Boot version", "version", version)
-		logger.Info("Git commit", "commit", commit)
-		logger.Info("Build time", "time", buildTime)
-		logger.Info("Supported architectures", "archs", vm.SupportedArchitectures())
+		fmt.Println("Q2Boot version", "version", version)
+		fmt.Println("Git commit", "commit", commit)
+		fmt.Println("Build time", "time", buildTime)
+		fmt.Println("Supported architectures", "archs", vm.SupportedArchitectures())
 
 		// Show QEMU binary availability
-		logger.Info("QEMU Binary Availability")
+		fmt.Println("QEMU Binary Availability")
 		availability := vm.CheckAvailableQEMUBinaries()
 		for _, arch := range vm.SupportedArchitectures() {
 			status := "❌ Not Available"
@@ -83,20 +82,20 @@ var versionCmd = &cobra.Command{
 				status = "✅ Available"
 			}
 			binary, _ := vm.GetQEMUBinaryForArch(arch)
-			logger.Info("Architecture", "arch", arch, "binary", binary, "status", status)
+			fmt.Println("Architecture", "arch", arch, "binary", binary, "status", status)
 		}
 
 		missing := vm.GetMissingQEMUBinaries()
 		if len(missing) > 0 {
-			logger.Info("To install missing QEMU binaries")
+			fmt.Println("To install missing QEMU binaries")
 			for _, arch := range missing {
 				binary, _ := vm.GetQEMUBinaryForArch(arch)
-				logger.Info("Missing binary", "arch", arch, "binary", binary)
+				fmt.Println("Missing binary", "arch", arch, "binary", binary)
 				instructions := vm.GetInstallationInstructions(binary)
 				lines := strings.Split(instructions, "\n")
 				for _, line := range lines {
 					if line != "" {
-						logger.Info("Instruction", "text", line)
+						fmt.Println("Instruction", "text", line)
 					}
 				}
 			}
@@ -160,7 +159,7 @@ func initConfig() {
 
 	// Create config directory if it doesn't exist
 	if err := os.MkdirAll(configDir, ConfigDirPermissions); err != nil {
-		logger.Error("Error creating config directory", "path", configDir, "error", err)
+		fmt.Println("Error creating config directory", "path", configDir, "error", err)
 		return
 	}
 
@@ -184,19 +183,19 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
 			// Config file not found, create default
-			logger.Info("No config file found. Creating default config", "path", configFile+"."+ConfigFileFormat)
+			fmt.Println("No config file found. Creating default config", "path", configFile+"."+ConfigFileFormat)
 			if err := viper.WriteConfigAs(configFile + "." + ConfigFileFormat); err != nil {
-				logger.Error("Error creating config file", "path", configFile+"."+ConfigFileFormat, "error", err)
+				fmt.Println("Error creating config file", "path", configFile+"."+ConfigFileFormat, "error", err)
 			}
 		} else {
-			logger.Error("Error reading config file", "error", err)
+			fmt.Println("Error reading config file", "error", err)
 		}
 	}
 
 	// Create config struct
 	cfg = &config.VMConfig{}
 	if err := viper.Unmarshal(cfg); err != nil {
-		logger.Error("Error unmarshaling config", "error", err)
+		fmt.Println("Error unmarshaling config", "error", err)
 		cfg = config.DefaultConfig()
 	}
 }
@@ -244,12 +243,12 @@ func applyFlagOverrides(cmd *cobra.Command, f *Flags, cfg *config.VMConfig, disk
 // detectArchitecture automatically detects the architecture from the disk image.
 // This is called when no explicit architecture was provided via flag.
 func detectArchitecture(diskPath string) (string, error) {
-	logger.Info("Attempting to detect architecture from disk image", "disk", diskPath)
+	fmt.Println("Attempting to detect architecture from disk image", "disk", diskPath)
 	arch, err := detector.DetectArchitecture(diskPath)
 	if err != nil {
 		return "", err
 	}
-	logger.Info("Successfully detected architecture", "arch", arch)
+	fmt.Println("Successfully detected architecture", "arch", arch)
 	return arch, nil
 }
 
@@ -298,16 +297,15 @@ func runQ2BootE(cmd *cobra.Command, args []string, cfg *config.VMConfig) error {
 	}
 
 	// Run the VM
-	logger.Info("Starting VM", "arch", cfg.Arch)
+	fmt.Println("Starting VM", "arch", cfg.Arch)
 	return virtualMachine.Run()
 }
 
 func main() {
 	// Initialize logger
-	_ = logger.Initialize(logger.InfoLevel, "text")
 
 	if err := rootCmd.Execute(); err != nil {
-		logger.Error("Fatal error", "error", err)
+		fmt.Println("Fatal error", "error", err)
 		os.Exit(1)
 	}
 }

@@ -53,6 +53,11 @@ func (vm *S390XVM) GetNetworkArgs() []string {
 // On s390x, this provides an interactive session in the terminal,
 // multiplexing the serial console and the QEMU monitor.
 func (vm *S390XVM) GetGraphicalArgs() []string {
+	if vm.LogFile != "" {
+		return []string{
+			"-nographic",
+		}
+	}
 	return []string{
 		"-nographic",
 		"-serial", "stdio",

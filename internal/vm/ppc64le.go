@@ -48,6 +48,9 @@ func (vm *PPC64LEVM) GetNetworkArgs() []string {
 
 // GetGraphicalArgs returns arguments for graphical mode on ppc64le
 func (vm *PPC64LEVM) GetGraphicalArgs() []string {
+	if vm.LogFile != "" {
+		return []string{"-nographic"}
+	}
 	// ppc64le does not support virtio-vga for graphical output.
 	// Instead, provide an interactive serial console, which is the
 	// expected behavior for this architecture.
