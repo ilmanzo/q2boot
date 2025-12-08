@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"slices"
 	"strings"
 )
 
@@ -116,10 +117,5 @@ func detectByVirtCat(diskPath string) (string, error) {
 
 // IsArchSupported checks if the given architecture is supported
 func IsArchSupported(arch string) bool {
-	for _, supported := range SupportedArchitectures {
-		if arch == supported {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(SupportedArchitectures, arch)
 }

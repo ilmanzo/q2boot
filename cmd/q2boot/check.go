@@ -234,8 +234,8 @@ func getLinuxDistro() string {
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := scanner.Text()
-		if strings.HasPrefix(line, "ID=") {
-			return strings.TrimPrefix(line, "ID=")
+		if after, ok := strings.CutPrefix(line, "ID="); ok {
+			return after
 		}
 	}
 	return "unknown"
