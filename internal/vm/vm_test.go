@@ -2,6 +2,7 @@ package vm
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 
@@ -345,13 +346,7 @@ func TestGetMissingQEMUBinaries(t *testing.T) {
 
 	// All missing architectures should be valid/supported architectures
 	for _, arch := range missing {
-		found := false
-		for _, supported := range supportedArchs {
-			if arch == supported {
-				found = true
-				break
-			}
-		}
+		found := slices.Contains(supportedArchs, arch)
 		if !found {
 			t.Errorf("GetMissingQEMUBinaries() returned unsupported architecture: %s", arch)
 		}
