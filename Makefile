@@ -31,17 +31,6 @@ release: fmt vet test
 	CGO_ENABLED=0 go build $(LDFLAGS) -a -installsuffix cgo -o $(BUILD_DIR)/$(BINARY_NAME) ./$(CMD_DIR)
 	@echo "Release build complete: $(BUILD_DIR)/$(BINARY_NAME)"
 
-# Cross-compile for multiple platforms
-build-all: fmt vet
-	@echo "Cross-compiling for multiple platforms..."
-	@mkdir -p $(BUILD_DIR)
-	GOOS=linux GOARCH=amd64 go build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-linux-amd64 ./$(CMD_DIR)
-	GOOS=linux GOARCH=arm64 go build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-linux-arm64 ./$(CMD_DIR)
-	GOOS=darwin GOARCH=amd64 go build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-amd64 ./$(CMD_DIR)
-	GOOS=darwin GOARCH=arm64 go build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-arm64 ./$(CMD_DIR)
-	GOOS=windows GOARCH=amd64 go build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-windows-amd64.exe ./$(CMD_DIR)
-	@echo "Cross-compilation complete"
-
 # Run unit tests
 unit-test:
 	@echo "Running unit tests..."
@@ -92,16 +81,6 @@ lint:
 		echo "golangci-lint not found. Install it with: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest"; \
 	fi
 
-# Run the application (requires disk image)
-run: build
-	@echo "Running $(BINARY_NAME)..."
-	@if [ -z "$(DISK)" ]; then \
-		echo "Usage: make run DISK=/path/to/disk.img"; \
-		echo "Example: make run DISK=ubuntu.img"; \
-	else \
-		$(BUILD_DIR)/$(BINARY_NAME) -d $(DISK) $(ARGS); \
-	fi
-
 # Install the binary to system PATH
 install: build
 	@echo "Installing $(BINARY_NAME) to /usr/local/bin..."
@@ -136,7 +115,6 @@ help:
 	@echo "Available targets:"
 	@echo "  build          Build the binary"
 	@echo "  release        Build optimized release binary"
-	@echo "  build-all      Cross-compile for multiple platforms"
 	@echo "  test           Run unit tests"
 	@echo "  unit-test      Run unit tests"
 	@echo "  test-coverage  Run tests with coverage report"
@@ -146,7 +124,6 @@ help:
 	@echo "  fmt            Format code"
 	@echo "  vet            Run go vet"
 	@echo "  lint           Run golangci-lint"
-	@echo "  run            Run the application (use DISK=/path/to/disk.img)"
 	@echo "  install        Install binary to /usr/local/bin"
 	@echo "  uninstall      Remove binary from /usr/local/bin"
 	@echo "  clean          Clean build artifacts"

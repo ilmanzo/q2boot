@@ -98,6 +98,9 @@ func (vm *AARCH64VM) GetGraphicalArgs() []string {
 // GetNonGraphicalDisplayArgs returns display arguments for non-graphical mode on aarch64
 // For non-graphical mode, we disable the display and redirect the serial console.
 func (vm *AARCH64VM) GetNonGraphicalDisplayArgs() []string {
+	if vm.LogFile != "" {
+		return []string{"-nographic"}
+	}
 	return []string{
 		"-nographic",
 		"-serial",

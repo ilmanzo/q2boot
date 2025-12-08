@@ -2,6 +2,7 @@ package vm
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"os/exec"
@@ -9,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/ilmanzo/q2boot/internal/config"
-	"github.com/ilmanzo/q2boot/internal/logger"
 )
 
 // VM configuration constants
@@ -28,6 +28,8 @@ const (
 	SerialConsoleStdio   = "stdio"
 	DisplayModeGraphical = "curses"
 )
+
+var logger *log.Logger
 
 // VM interface defines the methods that all VM implementations must provide
 type VM interface {
@@ -256,6 +258,13 @@ func (v *BaseVM) buildArgs(vm VM, extraArgs []string) []string {
 	}
 	// For graphical modes, the default monitor is usually in the GUI window, which is fine.
 
+	// Add logging arguments
+	if v.LogFile != "" {
+		args = append(args, "-chardev", fmt.Sprintf("stdio,mux=on,id=char0,logfile=%s,signal=off", v.LogFile))
+		args = append(args, "-mon", "chardev=char0,mode=readline")
+		args = append(args, "-serial", "chardev:char0")
+	}
+
 	return args
 }
 
@@ -268,8 +277,8 @@ func (v *BaseVM) run(vm VM) error {
 // RunVM executes the VM with the given binary and arguments.
 // The cleanup function is optional and will be called if the VM exits.
 func RunVM(binary string, args []string, confirm bool) error {
-	logger.Info("🚀 Starting QEMU with the following command:")
-	logger.Info("Command", "binary", binary, "args", strings.Join(args, " "))
+	fmt.Println("Starting QEMU with the following command:")
+	fmt.Println("Command", "binary", binary, "args", strings.Join(args, " "))
 
 	if confirm {
 		fmt.Print("Press Enter to continue...")
@@ -285,10 +294,10 @@ func RunVM(binary string, args []string, confirm bool) error {
 	err := cmd.Run()
 	if err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
-			logger.Error("QEMU exited with error", "status", exitError.ExitCode())
+			fmt.Println("QEMU exited with error", "status", exitError.ExitCode())
 			return fmt.Errorf("QEMU exited with status %d", exitError.ExitCode())
 		}
-		logger.Error("Failed to start QEMU", "error", err)
+		fmt.Println("Failed to start QEMU", "error", err)
 		return fmt.Errorf("failed to start QEMU: %w", err)
 	}
 
