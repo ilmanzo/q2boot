@@ -82,7 +82,7 @@ func TestValidate(t *testing.T) {
 			name: "invalid CPU - too high",
 			config: &VMConfig{
 				Arch:     "x86_64",
-				CPU:      33,
+				CPU:      65,
 				RAMGb:    4,
 				SSHPort:  2222,
 				DiskPath: tempFile,

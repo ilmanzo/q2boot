@@ -8,7 +8,7 @@ import (
 // Validation constants
 const (
 	MinCPU             = 1
-	MaxCPU             = 32
+	MaxCPU             = 64
 	MinRAM             = 1
 	MaxRAM             = 128
 	MinPrivilegedPort  = 1024
