@@ -86,10 +86,48 @@ func downloadHTTP(url, dest string) error {
 	}
 	defer out.Close()
 
-	// Using io.Copy to stream the download
-	// TODO: Add progress bar if needed, but for now simple copy
-	_, err = io.Copy(out, resp.Body)
+	// Initialize progress reader
+	pr := &ProgressReader{
+		Reader: resp.Body,
+		Total:  resp.ContentLength,
+	}
+
+	_, err = io.Copy(out, pr)
+	fmt.Println() // Print a newline after download completes
 	return err
+}
+
+// ProgressReader wraps an io.Reader and prints progress to stdout
+type ProgressReader struct {
+	io.Reader
+	Total       int64
+	Current     int64
+	LastPercent int
+}
+
+func (pr *ProgressReader) Read(p []byte) (int, error) {
+	n, err := pr.Reader.Read(p)
+	pr.Current += int64(n)
+
+	if pr.Total > 0 {
+		percent := int(float64(pr.Current) / float64(pr.Total) * 100)
+		// Only update if percentage changed to avoid spamming stdout
+		if percent > pr.LastPercent {
+			pr.LastPercent = percent
+			fmt.Printf("\rDownloading... %d%%", percent)
+		}
+	} else {
+		// If total size is unknown, just show bytes downloaded
+		// Update every 1MB roughly (assuming ~32KB buffer, 32 calls)
+		// Simpler: Just print every time? No, too fast.
+		// Let's print every 1MB.
+		const mb = 1024 * 1024
+		if pr.Current/mb > (pr.Current-int64(n))/mb {
+			fmt.Printf("\rDownloading... %d MB", pr.Current/mb)
+		}
+	}
+
+	return n, err
 }
 
 func downloadCurl(url, dest string) error {
