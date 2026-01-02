@@ -11,6 +11,7 @@ import (
 
 	"github.com/ilmanzo/q2boot/internal/config"
 	"github.com/ilmanzo/q2boot/internal/detector"
+	"github.com/ilmanzo/q2boot/internal/downloader"
 	"github.com/ilmanzo/q2boot/internal/vm"
 )
 
@@ -254,8 +255,20 @@ func detectArchitecture(diskPath string) (string, error) {
 
 // runQ2BootE contains the core logic for running the VM, making it testable.
 func runQ2BootE(cmd *cobra.Command, args []string, cfg *config.VMConfig) error {
+	diskPath := args[0]
+
+	// Handle remote images
+	if downloader.IsRemote(diskPath) {
+		localPath, cleanup, err := downloader.Download(diskPath)
+		if err != nil {
+			return fmt.Errorf("failed to download image: %w", err)
+		}
+		defer cleanup()
+		diskPath = localPath
+	}
+
 	// Apply flag overrides to configuration
-	applyFlagOverrides(cmd, flags, cfg, args[0])
+	applyFlagOverrides(cmd, flags, cfg, diskPath)
 
 	// If architecture was not explicitly provided via the command-line flag,
 	// attempt automatic detection. This correctly ignores any 'arch' from the config file.
