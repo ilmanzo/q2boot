@@ -54,7 +54,8 @@ Download pre-built binaries from the [releases page](https://github.com/ilmanzo/
 
 ### Basic Usage
 
-The only required argument is the path to the disk image you want to boot.
+The only required argument is the path to the disk image you want to boot, which can be on local disk or a remote URL. 
+Supported remote protocols: http:// https:// ftp:// smb://
 
 ```bash
 # Launch a VM with a disk image
