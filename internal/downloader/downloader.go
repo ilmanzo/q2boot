@@ -1,6 +1,8 @@
 package downloader
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"net/http"
@@ -8,7 +10,36 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 )
+
+// VerifySHA256 returns nil iff the file at path hashes to expectedHex
+// (case-insensitive). Use this for downloaded images: a fast Content-Length
+// check catches truncation, but only a hash catches a tampered/wrong-file
+// upstream.
+func VerifySHA256(path, expectedHex string) error {
+	expectedHex = strings.ToLower(strings.TrimSpace(expectedHex))
+	if len(expectedHex) != 64 {
+		return fmt.Errorf("invalid SHA-256: expected 64 hex chars, got %d", len(expectedHex))
+	}
+	if _, err := hex.DecodeString(expectedHex); err != nil {
+		return fmt.Errorf("invalid SHA-256: %w", err)
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		return fmt.Errorf("open %s: %w", path, err)
+	}
+	defer f.Close()
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return fmt.Errorf("hash %s: %w", path, err)
+	}
+	got := hex.EncodeToString(h.Sum(nil))
+	if got != expectedHex {
+		return fmt.Errorf("SHA-256 mismatch for %s:\n  got      %s\n  expected %s", path, got, expectedHex)
+	}
+	return nil
+}
 
 func IsRemote(path string) bool {
 	u, err := url.Parse(path)

@@ -88,6 +88,7 @@ q2boot disk.img --confirm
 | `--qemu-extra` | `-e` | Extra arguments to pass to QEMU | |
 | `--log-file` | `-l` | Serial console log file | `q2boot.log` |
 | `--confirm` | | Show command and wait for keypress before starting | false |
+| `--sha256` | | Expected SHA-256 hex digest of the disk image; abort if it does not match | |
 | `--help` | `-h` | Show help message | - |
 | `--version` | | Show version information | - |
 

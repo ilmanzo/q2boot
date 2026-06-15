@@ -26,6 +26,10 @@ var (
 	// flagCfg is the staging struct that CLI flags write into. It is merged
 	// into cfg in runQ2BootE based on which flags were Changed.
 	flagCfg = config.DefaultConfig()
+
+	// flagSha256 is runtime-only (not persisted to config) — the expected
+	// SHA-256 of the disk image, verified after download/before launch.
+	flagSha256 string
 )
 
 var rootCmd = &cobra.Command{
@@ -96,6 +100,7 @@ func setupFlags() {
 	pf.BoolVar(&flagCfg.Confirm, "confirm", flagCfg.Confirm, "Show command and wait for keypress before starting")
 	pf.Uint16VarP(&flagCfg.MonitorPort, "monitor-port", "m", flagCfg.MonitorPort, "Port for the QEMU monitor (telnet)")
 	pf.StringSliceVarP(&flagCfg.ExtraQemuArgs, "qemu-extra", "e", flagCfg.ExtraQemuArgs, "Extra arguments to pass to QEMU (can be specified multiple times)")
+	pf.StringVar(&flagSha256, "sha256", "", "Expected SHA-256 hex digest of the disk image; aborts if it does not match")
 }
 
 var testConfigDir string
@@ -205,6 +210,14 @@ func runQ2BootE(cmd *cobra.Command, args []string, cfg *config.VMConfig) error {
 		cfg.DiskPath = localPath
 	} else if _, err := os.Stat(cfg.DiskPath); err != nil {
 		return fmt.Errorf("disk image not accessible: %w", err)
+	}
+
+	if flagSha256 != "" {
+		fmt.Printf("Verifying SHA-256 of %s...\n", cfg.DiskPath)
+		if err := downloader.VerifySHA256(cfg.DiskPath, flagSha256); err != nil {
+			return err
+		}
+		fmt.Println("SHA-256 OK.")
 	}
 
 	if cfg.Arch == "" {
