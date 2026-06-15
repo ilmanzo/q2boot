@@ -38,35 +38,51 @@ func (vm *AARCH64VM) QEMUBinary() string {
 	return "qemu-system-aarch64"
 }
 
-// GetArchArgs returns architecture-specific arguments for aarch64
+// GetArchArgs returns architecture-specific arguments for aarch64.
+// UEFI requires two pflash devices: read-only code + writable vars (NVRAM).
+// The vars file is persisted next to the disk image so boot variables survive
+// across runs (matching real hardware behaviour) and we don't leak temp files.
 func (vm *AARCH64VM) GetArchArgs() []string {
 	args := []string{"-M", "virt", "-cpu", "max"}
 
-	if vm.FirmwarePath != "" {
-		// The variable store needs to be the same size as the code store.
-		firmwareInfo, err := os.Stat(vm.FirmwarePath)
-		if err != nil {
-			// If we can't stat the firmware, we can't proceed with pflash.
-			// This should be caught by other validations, but we'll be safe.
-			return args
-		}
-
-		// Create a temporary file for UEFI variables.
-		varsFile, err := os.CreateTemp("", "q2boot-aavmf-vars-*.fd")
-		if err == nil {
-			// Resize the empty file to match the firmware size.
-			varsFile.Truncate(firmwareInfo.Size())
-			varsFile.Close() // Close the file handle.
-
-			// QEMU needs two pflash devices for UEFI: one for code (readonly) and one for vars.
-			args = append(args,
-				"-drive", fmt.Sprintf("if=pflash,format=raw,readonly=on,file=%s", vm.FirmwarePath),
-				"-drive", fmt.Sprintf("if=pflash,format=raw,file=%s", varsFile.Name()),
-			)
-		}
+	if vm.FirmwarePath == "" || vm.DiskPath == "" {
+		// Without a disk we have nowhere to anchor the vars file; skip pflash.
+		return args
 	}
 
-	return args
+	firmwareInfo, err := os.Stat(vm.FirmwarePath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "warning: cannot stat aarch64 firmware %s: %v (skipping UEFI pflash setup)\n", vm.FirmwarePath, err)
+		return args
+	}
+
+	varsPath := vm.DiskPath + ".vars"
+	if err := ensureVarsFile(varsPath, firmwareInfo.Size()); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: cannot prepare UEFI vars file %s: %v (skipping pflash setup)\n", varsPath, err)
+		return args
+	}
+
+	return append(args,
+		"-drive", fmt.Sprintf("if=pflash,format=raw,readonly=on,file=%s", vm.FirmwarePath),
+		"-drive", fmt.Sprintf("if=pflash,format=raw,file=%s", varsPath),
+	)
+}
+
+// ensureVarsFile creates path as a zero-filled file of exactly size bytes if
+// it does not already exist. Existing files are left untouched.
+func ensureVarsFile(path string, size int64) error {
+	if info, err := os.Stat(path); err == nil {
+		if info.Size() != size {
+			return fmt.Errorf("existing vars file %s has size %d, expected %d (delete it to reinitialise)", path, info.Size(), size)
+		}
+		return nil
+	}
+	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	return f.Truncate(size)
 }
 
 // GetDiskArgs returns disk-specific arguments for aarch64
