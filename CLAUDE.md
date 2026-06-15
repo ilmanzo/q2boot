@@ -30,10 +30,14 @@ Flow in `runQ2BootE`:
 
 ### VM package (`internal/vm`)
 
-Interface + composition. `VM` interface in `vm.go`; each arch (`x86_64.go`, `aarch64.go`, `ppc64le.go`, `s390x.go`) embeds `*BaseVM` and supplies:
-- `QEMUBinary()`, `GetArchArgs()`, `GetDiskArgs()`, `GetNetworkArgs()`, `GetGraphicalArgs()`
-- optionally overrides `GetNonGraphicalDisplayArgs()` (e.g. x86_64 uses `-nographic` when a logfile is set; default is `-display curses`)
-- thin `Validate()` and `Run()` that delegate back to `BaseVM.Validate(vm)` / `BaseVM.run(vm)` so the base can call arch methods via the interface
+Data-table architecture. **All four QEMU architectures share one implementation** (`archVM` in `specs.go`); the only per-arch surface is an `ArchSpec` entry in `archSpecs` describing:
+- binary name + machine/cpu args
+- disk/net bus device + IDs + extra device options
+- whether `--graphical` should fall back to a serial console (ppc64le, s390x)
+- optional UEFI firmware search paths (aarch64)
+- per-distro package names (Ubuntu/SUSE/Arch) for install hints
+
+`BaseVM` holds the shared runtime state (CPU/RAM/ports/etc.) plus a `self VM` pointer set in each constructor so the promoted `Validate()` / `Run()` methods can dispatch into the concrete type's arch-specific methods. **Forgetting `self = v` in a new constructor will nil-deref at Validate/Run time.**
 
 `BaseVM.buildArgs` is the single place QEMU args are assembled; arch-specific code only returns its slice. Display/monitor handling has subtle interactions: graphical implemented via `-nographic` (s390x) suppresses default monitor; non-graphical adds `-snapshot` unless `WriteMode`; logfile mode rewires `-chardev`/`-mon`/`-serial` to mux stdio into the file.
 
@@ -45,10 +49,10 @@ Interface + composition. `VM` interface in `vm.go`; each arch (`x86_64.go`, `aar
 
 ### Adding a new architecture
 
-1. New `internal/vm/<arch>.go` embedding `*BaseVM`, implementing the interface methods above.
-2. Add the case to `CreateVM` in `factory.go` **and** the literal in `SupportedArchitectures()`.
-3. Add the same string to `detector.SupportedArchitectures` and (if needed) an ELF match branch in `detectByVirtCat`.
-4. Extend `GetInstallationInstructions` in `vm.go` with the per-distro package names.
+1. Append an `ArchSpec` entry to `archSpecs` in `internal/vm/specs.go`.
+2. Add the arch token to the regex in `internal/detector/detector.go` (`archFilenameRe`) and add a virt-cat ELF-match branch in `detectByVirtCat`.
+
+That's it. `factory.go` and the version/check commands derive everything they need from the spec table.
 
 ## Notes
 

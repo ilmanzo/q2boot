@@ -1,73 +1,73 @@
 package vm
 
-import (
-	"fmt"
-	"slices"
-)
+import "fmt"
 
-// CreateVM creates a VM instance based on the specified architecture
+// CreateVM creates a VM instance based on the specified architecture.
+// Declared as a var so tests can substitute it (see internal/vm/mock_vm.go).
 var CreateVM = func(arch string) (VM, error) {
-	switch arch {
-	case "x86_64":
-		return NewX86_64VM(), nil
-	case "aarch64":
-		return NewAARCH64VM(), nil
-	case "ppc64le":
-		return NewPPC64LEVM(), nil
-	case "s390x":
-		return NewS390XVM(), nil
-	default:
+	spec, ok := specFor(arch)
+	if !ok {
 		return nil, fmt.Errorf("unsupported architecture: %s", arch)
 	}
+	return newArchVM(spec), nil
 }
 
-// SupportedArchitectures returns a list of supported architectures
+// SupportedArchitectures returns the list of architectures q2boot knows about.
 func SupportedArchitectures() []string {
-	return []string{"x86_64", "aarch64", "ppc64le", "s390x"}
+	out := make([]string, len(archSpecs))
+	for i, s := range archSpecs {
+		out[i] = s.Arch
+	}
+	return out
 }
 
-// IsArchSupported checks if the given architecture is supported
 func IsArchSupported(arch string) bool {
-	return slices.Contains(SupportedArchitectures(), arch)
+	_, ok := specFor(arch)
+	return ok
 }
 
-// GetQEMUBinaryForArch returns the QEMU binary name for the given architecture
 func GetQEMUBinaryForArch(arch string) (string, error) {
-	vm, err := CreateVM(arch)
-	if err != nil {
-		return "", err
+	spec, ok := specFor(arch)
+	if !ok {
+		return "", fmt.Errorf("unsupported architecture: %s", arch)
 	}
-	return vm.QEMUBinary(), nil
+	return spec.Binary, nil
 }
 
-// CheckAvailableQEMUBinaries checks which QEMU binaries are available on the system
+// CheckAvailableQEMUBinaries returns arch → whether qemu-system-<arch> is on PATH.
 func CheckAvailableQEMUBinaries() map[string]bool {
-	availability := make(map[string]bool)
-
-	for _, arch := range SupportedArchitectures() {
-		binary, err := GetQEMUBinaryForArch(arch)
-		if err != nil {
-			availability[arch] = false
-			continue
-		}
-
-		err = ValidateQEMUBinary(binary)
-		availability[arch] = (err == nil)
+	out := make(map[string]bool, len(archSpecs))
+	for _, s := range archSpecs {
+		out[s.Arch] = ValidateQEMUBinary(s.Binary) == nil
 	}
-
-	return availability
+	return out
 }
 
-// GetMissingQEMUBinaries returns a list of architectures that are missing their QEMU binaries
 func GetMissingQEMUBinaries() []string {
 	var missing []string
-	availability := CheckAvailableQEMUBinaries()
-
-	for arch, available := range availability {
-		if !available {
+	for arch, ok := range CheckAvailableQEMUBinaries() {
+		if !ok {
 			missing = append(missing, arch)
 		}
 	}
-
 	return missing
+}
+
+// GetInstallationInstructions returns per-distro install hints for an arch's
+// QEMU binary. Lookup is by binary name (not arch) to keep the public API
+// stable for the version/check commands.
+func GetInstallationInstructions(binary string) string {
+	pkgs := InstallPkgs{"qemu-system", "unknown", "unknown"}
+	for _, s := range archSpecs {
+		if s.Binary == binary {
+			pkgs = s.InstallPkgs
+			break
+		}
+	}
+	return fmt.Sprintf("Please install the appropriate QEMU package for your system:\n"+
+		"  - Ubuntu/Debian: sudo apt install %s\n"+
+		"  - RHEL/CentOS/Fedora: sudo dnf install qemu-system or sudo yum install qemu-system\n"+
+		"  - SUSE/openSUSE: sudo zypper install qemu-%s\n"+
+		"  - Arch Linux: sudo pacman -S qemu-system-%s\n"+
+		"  - macOS: brew install qemu", pkgs.Ubuntu, pkgs.SUSE, pkgs.Arch)
 }

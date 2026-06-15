@@ -21,11 +21,10 @@ const (
 	LocalhostAddress     = "127.0.0.1"
 	TCPNetworkProtocol   = "tcp"
 	MonitorProtocol      = "telnet"
-	AudioDeviceID        = "snd0"
-	AudioDeviceType      = "none"
-	SnapshotArgument     = "-snapshot"
-	SerialConsoleStdio   = "stdio"
-	DisplayModeGraphical = "curses"
+	AudioDeviceID      = "snd0"
+	AudioDeviceType    = "none"
+	SnapshotArgument   = "-snapshot"
+	SerialConsoleStdio = "stdio"
 )
 
 // VM interface defines the methods that all VM implementations must provide
@@ -87,37 +86,6 @@ func (v *BaseVM) Configure(cfg *config.VMConfig) {
 		v.DiskPath = cfg.DiskPath
 	}
 	v.ExtraQemuArgs = cfg.ExtraQemuArgs
-}
-
-// GetNonGraphicalDisplayArgs returns display arguments for non-graphical mode
-// Default implementation uses curses display
-func (v *BaseVM) GetNonGraphicalDisplayArgs() []string {
-	return []string{"-display", DisplayModeGraphical}
-}
-
-// GetInstallationInstructions returns architecture-specific installation instructions for a QEMU binary
-func GetInstallationInstructions(binary string) string {
-	var ubuntuPkg, suseArch, archPkg string
-
-	switch binary {
-	case "qemu-system-x86_64":
-		ubuntuPkg, suseArch, archPkg = "qemu-system-x86", "x86", "x86"
-	case "qemu-system-aarch64":
-		ubuntuPkg, suseArch, archPkg = "qemu-system-arm", "arm", "aarch64"
-	case "qemu-system-ppc64":
-		ubuntuPkg, suseArch, archPkg = "qemu-system-ppc", "ppc", "ppc64"
-	case "qemu-system-s390x":
-		ubuntuPkg, suseArch, archPkg = "qemu-system-s390x", "s390x", "s390x"
-	default:
-		ubuntuPkg, suseArch, archPkg = "qemu-system", "unknown", "unknown"
-	}
-
-	return fmt.Sprintf("Please install the appropriate QEMU package for your system:\n"+
-		"  - Ubuntu/Debian: sudo apt install %s\n"+
-		"  - RHEL/CentOS/Fedora: sudo dnf install qemu-system or sudo yum install qemu-system\n"+
-		"  - SUSE/openSUSE: sudo zypper install qemu-%s\n"+
-		"  - Arch Linux: sudo pacman -S qemu-system-%s\n"+
-		"  - macOS: brew install qemu", ubuntuPkg, suseArch, archPkg)
 }
 
 // ValidateQEMUBinary checks if the specified QEMU binary is installed and available

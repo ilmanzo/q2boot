@@ -179,59 +179,34 @@ func TestIsArchSupported(t *testing.T) {
 	}
 }
 
-// Test specific VM implementations
-func TestX86_64VM(t *testing.T) {
-	vm := NewX86_64VM()
-
-	if vm.QEMUBinary() != "qemu-system-x86_64" {
-		t.Errorf("Expected QEMU binary to be qemu-system-x86_64, got %s", vm.QEMUBinary())
+// TestArchSpecs verifies each registered arch produces the expected static
+// machine args. The dynamic bits (disk/net args with embedded DiskPath/CPU)
+// are exercised by TestBuildArgs via the mock.
+func TestArchSpecs(t *testing.T) {
+	cases := map[string]struct {
+		binary string
+		// expectedMachine is len-checked, not value-compared, because aarch64
+		// may append pflash drives when firmware is present on the host.
+		minMachineArgs int
+	}{
+		"x86_64":  {"qemu-system-x86_64", 5},
+		"aarch64": {"qemu-system-aarch64", 4},
+		"ppc64le": {"qemu-system-ppc64", 4},
+		"s390x":   {"qemu-system-s390x", 4},
 	}
-
-	archArgs := vm.GetArchArgs()
-	expectedArgs := []string{"-M", "q35", "-enable-kvm", "-cpu", "host"}
-	if len(archArgs) != len(expectedArgs) {
-		t.Errorf("Expected %d arch args, got %d", len(expectedArgs), len(archArgs))
-	}
-}
-
-func TestAARCH64VM(t *testing.T) {
-	vm := NewAARCH64VM()
-
-	if vm.QEMUBinary() != "qemu-system-aarch64" {
-		t.Errorf("Expected QEMU binary to be qemu-system-aarch64, got %s", vm.QEMUBinary())
-	}
-
-	archArgs := vm.GetArchArgs()
-	if len(archArgs) == 0 {
-		t.Error("Expected non-empty arch args for aarch64")
-	}
-}
-
-func TestPPC64LEVM(t *testing.T) {
-	vm := NewPPC64LEVM()
-
-	if vm.QEMUBinary() != "qemu-system-ppc64" {
-		t.Errorf("Expected QEMU binary to be qemu-system-ppc64, got %s", vm.QEMUBinary())
-	}
-
-	archArgs := vm.GetArchArgs()
-	expectedArgs := []string{"-M", "pseries", "-cpu", "power10"}
-	if len(archArgs) != len(expectedArgs) {
-		t.Errorf("Expected %d arch args, got %d", len(expectedArgs), len(archArgs))
-	}
-}
-
-func TestS390XVM(t *testing.T) {
-	vm := NewS390XVM()
-
-	if vm.QEMUBinary() != "qemu-system-s390x" {
-		t.Errorf("Expected QEMU binary to be qemu-system-s390x, got %s", vm.QEMUBinary())
-	}
-
-	archArgs := vm.GetArchArgs()
-	expectedArgs := []string{"-machine", "s390-ccw-virtio", "-cpu", "max"}
-	if len(archArgs) != len(expectedArgs) {
-		t.Errorf("Expected %d arch args, got %d", len(expectedArgs), len(archArgs))
+	for arch, want := range cases {
+		t.Run(arch, func(t *testing.T) {
+			v, err := CreateVM(arch)
+			if err != nil {
+				t.Fatalf("CreateVM(%q): %v", arch, err)
+			}
+			if got := v.QEMUBinary(); got != want.binary {
+				t.Errorf("QEMUBinary() = %s, want %s", got, want.binary)
+			}
+			if got := len(v.GetArchArgs()); got < want.minMachineArgs {
+				t.Errorf("GetArchArgs() length = %d, want >= %d", got, want.minMachineArgs)
+			}
+		})
 	}
 }
 
