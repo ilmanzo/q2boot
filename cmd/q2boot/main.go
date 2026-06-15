@@ -1,12 +1,12 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 
 	"github.com/ilmanzo/q2boot/internal/config"
 	"github.com/ilmanzo/q2boot/internal/detector"
@@ -20,8 +20,12 @@ var (
 	commit    = "unknown"
 	buildTime = "unknown"
 
-	// cfg is populated lazily in runQ2BootE from viper (file + flag merge).
+	// cfg holds the merged config: defaults < config file < CLI flags.
 	cfg *config.VMConfig
+
+	// flagCfg is the staging struct that CLI flags write into. It is merged
+	// into cfg in runQ2BootE based on which flags were Changed.
+	flagCfg = config.DefaultConfig()
 )
 
 var rootCmd = &cobra.Command{
@@ -75,90 +79,98 @@ func init() {
 	setupFlags()
 }
 
-// setupFlags declares the persistent CLI flags and binds them to viper.
-// Flag values are read back via viper.Unmarshal(cfg) in runQ2BootE — there
-// is no parallel Flags struct, and viper's pflag precedence does the merge
-// (CLI > env > config file > default) automatically.
-//
-// IMPORTANT: BindPFlag keys MUST match VMConfig mapstructure tags or
-// Unmarshal silently drops the flag value. See [[viper-bind-key-mismatch]].
+// setupFlags declares the persistent CLI flags. Each flag writes its value
+// into flagCfg; precedence (defaults < file < CLI) is applied in runQ2BootE.
 func setupFlags() {
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(NewCheckCmd())
 
 	pf := rootCmd.PersistentFlags()
-	pf.IntP("cpu", "c", 0, "Number of CPU cores (default: 2)")
-	pf.IntP("ram", "r", 0, "Amount of RAM in GB (default: 2)")
-	pf.StringP("arch", "a", "", "CPU architecture (x86_64, aarch64, ppc64le, s390x). Auto-detected from disk image if not specified")
-	pf.Uint16P("ssh-port", "p", 0, "Host port for SSH forwarding (default: 2222)")
-	pf.StringP("log-file", "l", "", "Path to the log file (default: q2boot.log)")
-	pf.BoolP("graphical", "g", false, "Enable graphical console (default: false)")
-	pf.BoolP("write-mode", "w", false, "Enable write mode (changes are saved to disk) (default: false)")
-	pf.Bool("confirm", false, "Show command and wait for keypress before starting (default: false)")
-	pf.Uint16P("monitor-port", "m", 0, "Port for the QEMU monitor (telnet)")
-	pf.StringSliceP("qemu-extra", "e", []string{}, "Extra arguments to pass to QEMU (can be specified multiple times)")
-
-	viper.BindPFlag("cpu", pf.Lookup("cpu"))
-	viper.BindPFlag("ram_gb", pf.Lookup("ram"))
-	viper.BindPFlag("arch", pf.Lookup("arch"))
-	viper.BindPFlag("ssh_port", pf.Lookup("ssh-port"))
-	viper.BindPFlag("log_file", pf.Lookup("log-file"))
-	viper.BindPFlag("graphical", pf.Lookup("graphical"))
-	viper.BindPFlag("write_mode", pf.Lookup("write-mode"))
-	viper.BindPFlag("confirm", pf.Lookup("confirm"))
-	viper.BindPFlag("monitor_port", pf.Lookup("monitor-port"))
-	viper.BindPFlag("extra_qemu_args", pf.Lookup("qemu-extra"))
+	pf.IntVarP(&flagCfg.CPU, "cpu", "c", flagCfg.CPU, "Number of CPU cores")
+	pf.IntVarP(&flagCfg.RAMGb, "ram", "r", flagCfg.RAMGb, "Amount of RAM in GB")
+	pf.StringVarP(&flagCfg.Arch, "arch", "a", flagCfg.Arch, "CPU architecture (x86_64, aarch64, ppc64le, s390x). Auto-detected from disk image if not specified")
+	pf.Uint16VarP(&flagCfg.SSHPort, "ssh-port", "p", flagCfg.SSHPort, "Host port for SSH forwarding")
+	pf.StringVarP(&flagCfg.LogFile, "log-file", "l", flagCfg.LogFile, "Path to the log file")
+	pf.BoolVarP(&flagCfg.Graphical, "graphical", "g", flagCfg.Graphical, "Enable graphical console")
+	pf.BoolVarP(&flagCfg.WriteMode, "write-mode", "w", flagCfg.WriteMode, "Enable write mode (changes are saved to disk)")
+	pf.BoolVar(&flagCfg.Confirm, "confirm", flagCfg.Confirm, "Show command and wait for keypress before starting")
+	pf.Uint16VarP(&flagCfg.MonitorPort, "monitor-port", "m", flagCfg.MonitorPort, "Port for the QEMU monitor (telnet)")
+	pf.StringSliceVarP(&flagCfg.ExtraQemuArgs, "qemu-extra", "e", flagCfg.ExtraQemuArgs, "Extra arguments to pass to QEMU (can be specified multiple times)")
 }
 
 // testConfigDir is used by tests to override the default config location.
 var testConfigDir string
 
-func initConfig() {
-	var configDir string
-
+func configPath() (string, string) {
 	if testConfigDir != "" {
-		configDir = testConfigDir
-	} else {
-		home, err := os.UserHomeDir()
-		cobra.CheckErr(err)
-		configDir = filepath.Join(home, ".config", "q2boot")
+		return testConfigDir, filepath.Join(testConfigDir, "config.json")
 	}
-	configFile := filepath.Join(configDir, "config.json")
+	home, err := os.UserHomeDir()
+	cobra.CheckErr(err)
+	dir := filepath.Join(home, ".config", "q2boot")
+	return dir, filepath.Join(dir, "config.json")
+}
 
-	if err := os.MkdirAll(configDir, 0700); err != nil {
-		fmt.Printf("Error creating config directory %s: %v\n", configDir, err)
+// initConfig loads ~/.config/q2boot/config.json into cfg, falling back to
+// DefaultConfig if the file is missing (in which case the defaults are also
+// written out so users have something to edit).
+func initConfig() {
+	dir, path := configPath()
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating config directory %s: %v\n", dir, err)
+		cfg = config.DefaultConfig()
 		return
 	}
-
-	viper.SetConfigName("config")
-	viper.SetConfigType("json")
-	viper.AddConfigPath(configDir)
-
-	viper.SetDefault("arch", "")
-	viper.SetDefault("cpu", config.DefaultCPU)
-	viper.SetDefault("ram_gb", config.DefaultRAMGb)
-	viper.SetDefault("ssh_port", config.DefaultSSHPort)
-	viper.SetDefault("log_file", config.DefaultLogFile)
-	viper.SetDefault("graphical", false)
-	viper.SetDefault("write_mode", false)
-	viper.SetDefault("confirm", false)
-	viper.SetDefault("extra_qemu_args", []string{})
-
-	if err := viper.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-			fmt.Printf("No config file found. Creating default at %s\n", configFile)
-			if err := viper.WriteConfigAs(configFile); err != nil {
-				fmt.Printf("Error creating config file %s: %v\n", configFile, err)
+	loaded, err := config.Load(path)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			fmt.Printf("No config file found. Creating default at %s\n", path)
+			cfg = config.DefaultConfig()
+			if werr := config.Save(path, cfg); werr != nil {
+				fmt.Fprintf(os.Stderr, "Error creating config file %s: %v\n", path, werr)
 			}
-		} else {
-			fmt.Printf("Error reading config file: %v\n", err)
+			return
 		}
-	}
-
-	cfg = &config.VMConfig{}
-	if err := viper.Unmarshal(cfg); err != nil {
-		fmt.Printf("Error unmarshaling config: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error reading config file (using defaults): %v\n", err)
 		cfg = config.DefaultConfig()
+		return
+	}
+	cfg = loaded
+}
+
+// applyChangedFlags overrides cfg fields with flagCfg values for any flag
+// the user actually passed on the command line.
+func applyChangedFlags(cmd *cobra.Command, cfg *config.VMConfig) {
+	pf := cmd.Flags()
+	if pf.Changed("cpu") {
+		cfg.CPU = flagCfg.CPU
+	}
+	if pf.Changed("ram") {
+		cfg.RAMGb = flagCfg.RAMGb
+	}
+	if pf.Changed("arch") {
+		cfg.Arch = flagCfg.Arch
+	}
+	if pf.Changed("ssh-port") {
+		cfg.SSHPort = flagCfg.SSHPort
+	}
+	if pf.Changed("log-file") {
+		cfg.LogFile = flagCfg.LogFile
+	}
+	if pf.Changed("graphical") {
+		cfg.Graphical = flagCfg.Graphical
+	}
+	if pf.Changed("write-mode") {
+		cfg.WriteMode = flagCfg.WriteMode
+	}
+	if pf.Changed("confirm") {
+		cfg.Confirm = flagCfg.Confirm
+	}
+	if pf.Changed("monitor-port") {
+		cfg.MonitorPort = flagCfg.MonitorPort
+	}
+	if pf.Changed("qemu-extra") {
+		cfg.ExtraQemuArgs = flagCfg.ExtraQemuArgs
 	}
 }
 
@@ -178,13 +190,7 @@ func detectArchitecture(diskPath string) (string, error) {
 
 // runQ2BootE contains the core logic for running the VM, making it testable.
 func runQ2BootE(cmd *cobra.Command, args []string, cfg *config.VMConfig) error {
-	// Re-unmarshal so that values bound after initConfig (e.g. flags parsed
-	// during Execute) are reflected in cfg. cmd argument retained for parity
-	// with cobra signatures.
-	_ = cmd
-	if err := viper.Unmarshal(cfg); err != nil {
-		return fmt.Errorf("failed to unmarshal config: %w", err)
-	}
+	applyChangedFlags(cmd, cfg)
 	cfg.DiskPath = args[0]
 	remote := downloader.IsRemote(cfg.DiskPath)
 
@@ -205,8 +211,7 @@ func runQ2BootE(cmd *cobra.Command, args []string, cfg *config.VMConfig) error {
 		return fmt.Errorf("disk image not accessible: %w", err)
 	}
 
-	// If architecture was not specified anywhere (flag, env, or config file),
-	// auto-detect from the disk image.
+	// Auto-detect when no architecture is set anywhere (flag or file).
 	if cfg.Arch == "" {
 		detectedArch, err := detectArchitecture(cfg.DiskPath)
 		if err != nil {

@@ -23,10 +23,11 @@ Release builds bake `version`/`commit`/`buildTime` via `-ldflags` (see Makefile)
 Entry: `cmd/q2boot/main.go` (cobra + viper). Subcommands: root `runQ2Boot`, `version`, `check` (`check.go`).
 
 Flow in `runQ2BootE`:
-1. If disk path is a remote URL (`http/https/ftp/smb`), `downloader.Download` fetches to a temp file with a `cleanup` func (deferred).
-2. `applyFlagOverrides` merges CLI flags into the viper-loaded `*config.VMConfig`. Precedence: **CLI flag > config file > viper default**. Flag-vs-config detection uses `cmd.Flags().Changed(name)` for bools/ports because their zero values are ambiguous.
-3. If `--arch` was not set, `detector.DetectArchitecture` runs: tries `virt-cat <disk> /bin/sh | file -` (ELF arch sniff), falls back to filename substring match (`-arch`, `_arch`, `@arch`).
-4. `cfg.Validate()` → `vm.ValidatePortsAvailable` → `vm.IsArchSupported` → `vm.CreateVM(arch)` → `Configure(cfg)` → `Validate()` → `Run()`.
+1. `applyChangedFlags` overlays CLI flag values onto the file-loaded `*config.VMConfig`. Precedence: **CLI flag > config file > defaults**. Bool/port detection uses `cmd.Flags().Changed(name)`. There is no viper; merge is explicit code in `main.go`.
+2. If disk path is a remote URL (`http/https/ftp/smb`), `downloader.Download` fetches to a temp file with a `cleanup` func (deferred). Local paths are stat-checked for existence.
+3. `--write-mode` is rejected when the disk is remote (changes would vanish with the temp file).
+4. If `cfg.Arch == ""`, `detector.DetectArchitecture` runs: tries `virt-cat <disk> /bin/sh | file -` (ELF arch sniff), falls back to filename regex (`-arch`, `_arch`, `@arch`).
+5. `cfg.Validate()` (pure value ranges) → `vm.CreateVM(arch)` → `Configure(cfg)` → `Validate()` (binary + port + disk-set check) → `Run()`.
 
 ### VM package (`internal/vm`)
 
@@ -45,7 +46,7 @@ Data-table architecture. **All four QEMU architectures share one implementation*
 
 ### Config (`internal/config`)
 
-`VMConfig` carries both `json` and `mapstructure` tags (viper unmarshals via mapstructure; JSON is for the persisted config file). Validation enforces CPU/RAM/port ranges and `disk_path` existence.
+`VMConfig` is a plain struct with `json` tags. `config.Load(path)` / `config.Save(path, cfg)` use stdlib `encoding/json` — viper was removed. `mapstructure` tags are still present for historical compatibility but are no longer consumed. `Validate()` enforces only pure value ranges (CPU, RAM, port bounds, DiskPath non-empty); disk-existence is checked at the call site in `main.go`.
 
 ### Adding a new architecture
 
@@ -57,4 +58,5 @@ That's it. `factory.go` and the version/check commands derive everything they ne
 ## Notes
 
 - `cmd/q2boot/check.go` aliases `os.ReadFile`/`os.Stat`/`os.OpenFile` as package vars for test injection — preserve this when editing.
-- Defaults live in two places by design: viper `SetDefault` in `initConfig` for the config-file path, and the `Default*` constants in `internal/config` / `internal/vm` for programmatic construction.
+- Defaults live in one place: `config.DefaultConfig()` in `internal/config`. `flagCfg` in `main.go` is initialised from it so cobra flag defaults match the documented values.
+- The `mapstructure` struct tags on `VMConfig` are vestigial (viper is gone). Safe to delete on the next sweep.
