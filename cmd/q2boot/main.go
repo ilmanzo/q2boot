@@ -232,9 +232,15 @@ func detectArchitecture(diskPath string) (string, error) {
 // runQ2BootE contains the core logic for running the VM, making it testable.
 func runQ2BootE(cmd *cobra.Command, args []string, cfg *config.VMConfig) error {
 	diskPath := args[0]
+	remote := downloader.IsRemote(diskPath)
 
-	// Handle remote images
-	if downloader.IsRemote(diskPath) {
+	// Reject the combination of a remote image and --write-mode: the local copy
+	// lives in a temp file we delete on exit, so any persistence intent is a lie.
+	if remote && cmd.Flags().Changed("write-mode") && flags.WriteMode {
+		return fmt.Errorf("--write-mode cannot be used with a remote image (%s): changes would be discarded with the downloaded temp file. Download the image first, then pass the local path", diskPath)
+	}
+
+	if remote {
 		localPath, cleanup, err := downloader.Download(diskPath)
 		if err != nil {
 			return fmt.Errorf("failed to download image: %w", err)
