@@ -11,6 +11,23 @@ import (
 	"github.com/ilmanzo/q2boot/internal/config"
 )
 
+// FormatCommand renders binary + args one token per line, splitting at each
+// QEMU flag (`-foo`) so the structure is reviewable. Used by --confirm,
+// --dry-run, and the regular launch banner.
+func FormatCommand(binary string, args []string) string {
+	var b strings.Builder
+	b.WriteString(binary)
+	for _, a := range args {
+		if strings.HasPrefix(a, "-") {
+			b.WriteString(" \\\n  ")
+		} else {
+			b.WriteByte(' ')
+		}
+		b.WriteString(a)
+	}
+	return b.String()
+}
+
 const (
 	LocalhostAddress   = "127.0.0.1"
 	TCPNetworkProtocol = "tcp"
@@ -144,6 +161,10 @@ func (v *BaseVM) buildArgs(vm VM, extraArgs []string) []string {
 	return args
 }
 
+// DryRun, when true, makes Run print the command and return without execing.
+// Set from cmd/q2boot/main.go based on the --dry-run flag.
+var DryRun bool
+
 func (v *BaseVM) Run() error {
 	args := v.buildArgs(v.self, nil)
 	return RunVM(v.self.QEMUBinary(), args, v.Confirm)
@@ -151,10 +172,15 @@ func (v *BaseVM) Run() error {
 
 func RunVM(binary string, args []string, confirm bool) error {
 	fmt.Println("Starting QEMU with the following command:")
-	fmt.Printf("  %s %s\n", binary, strings.Join(args, " "))
+	fmt.Println(FormatCommand(binary, args))
+
+	if DryRun {
+		fmt.Println("\n--dry-run: not executing QEMU.")
+		return nil
+	}
 
 	if confirm {
-		fmt.Print("Press Enter to continue...")
+		fmt.Print("\nPress Enter to continue...")
 		var input string
 		fmt.Scanln(&input)
 	}

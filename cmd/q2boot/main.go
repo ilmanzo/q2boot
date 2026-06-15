@@ -30,6 +30,9 @@ var (
 	// flagSha256 is runtime-only (not persisted to config) — the expected
 	// SHA-256 of the disk image, verified after download/before launch.
 	flagSha256 string
+
+	// flagDryRun prints the QEMU command and exits without launching.
+	flagDryRun bool
 )
 
 var rootCmd = &cobra.Command{
@@ -114,6 +117,7 @@ func setupFlags() {
 	pf.Uint16VarP(&flagCfg.MonitorPort, "monitor-port", "m", flagCfg.MonitorPort, "Port for the QEMU monitor (telnet)")
 	pf.StringSliceVarP(&flagCfg.ExtraQemuArgs, "qemu-extra", "e", flagCfg.ExtraQemuArgs, "Extra arguments to pass to QEMU (can be specified multiple times)")
 	pf.StringVar(&flagSha256, "sha256", "", "Expected SHA-256 hex digest of the disk image; aborts if it does not match")
+	pf.BoolVar(&flagDryRun, "dry-run", false, "Print the QEMU command that would be executed and exit")
 }
 
 var testConfigDir string
@@ -257,6 +261,8 @@ func runQ2BootE(cmd *cobra.Command, args []string, cfg *config.VMConfig) error {
 	if err := virtualMachine.Validate(); err != nil {
 		return fmt.Errorf("VM validation failed: %w", err)
 	}
+
+	vm.DryRun = flagDryRun
 
 	fmt.Printf("Starting VM (arch=%s)\n", cfg.Arch)
 	return virtualMachine.Run()

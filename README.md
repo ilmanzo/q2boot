@@ -89,6 +89,7 @@ q2boot disk.img --confirm
 | `--log-file` | `-l` | Serial console log file | `q2boot.log` |
 | `--confirm` | | Show command and wait for keypress before starting | false |
 | `--sha256` | | Expected SHA-256 hex digest of the disk image; abort if it does not match | |
+| `--dry-run` | | Print the QEMU command that would be executed and exit | false |
 | `--help` | `-h` | Show help message | - |
 | `--version` | | Show version information | - |
 

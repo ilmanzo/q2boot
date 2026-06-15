@@ -557,3 +557,19 @@ func TestBuildArgsWithExtraArgs(t *testing.T) {
 		}
 	}
 }
+
+func TestFormatCommand(t *testing.T) {
+	got := FormatCommand("qemu-system-x86_64", []string{"-m", "4G", "-cpu", "host", "-drive", "file=/x.img"})
+	want := "qemu-system-x86_64 \\\n  -m 4G \\\n  -cpu host \\\n  -drive file=/x.img"
+	if got != want {
+		t.Errorf("FormatCommand mismatch:\ngot:\n%s\nwant:\n%s", got, want)
+	}
+}
+
+func TestRunVMDryRun(t *testing.T) {
+	DryRun = true
+	defer func() { DryRun = false }()
+	if err := RunVM("/bin/false", []string{"--ignored"}, false); err != nil {
+		t.Errorf("dry-run RunVM should not error, got: %v", err)
+	}
+}
