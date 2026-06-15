@@ -1,6 +1,8 @@
 package vm
 
 import (
+	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -572,4 +574,15 @@ func TestRunVMDryRun(t *testing.T) {
 	if err := RunVM("/bin/false", []string{"--ignored"}, false); err != nil {
 		t.Errorf("dry-run RunVM should not error, got: %v", err)
 	}
+}
+
+func TestPrintLogTail(t *testing.T) {
+	tmp := filepath.Join(t.TempDir(), "x.log")
+	if err := os.WriteFile(tmp, []byte("a\nb\nc\nd\ne\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	// We can't easily capture stderr without a pipe dance; just check it
+	// doesn't panic/error and a missing file is a silent no-op.
+	printLogTail(tmp, 3)
+	printLogTail("/no/such/log", 3)
 }

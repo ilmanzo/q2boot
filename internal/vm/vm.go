@@ -167,7 +167,30 @@ var DryRun bool
 
 func (v *BaseVM) Run() error {
 	args := v.buildArgs(v.self, nil)
-	return RunVM(v.self.QEMUBinary(), args, v.Confirm)
+	err := RunVM(v.self.QEMUBinary(), args, v.Confirm)
+	if err != nil && v.LogFile != "" {
+		printLogTail(v.LogFile, 20)
+	}
+	return err
+}
+
+// printLogTail writes the last n non-empty lines of path to stderr. Best
+// effort: a failure to read the log is itself silenced (the QEMU error has
+// already surfaced; a log-tail error would only obscure it).
+func printLogTail(path string, n int) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return
+	}
+	lines := strings.Split(strings.TrimRight(string(data), "\n"), "\n")
+	if len(lines) > n {
+		lines = lines[len(lines)-n:]
+	}
+	fmt.Fprintf(os.Stderr, "\n--- last %d lines of %s ---\n", len(lines), path)
+	for _, l := range lines {
+		fmt.Fprintln(os.Stderr, l)
+	}
+	fmt.Fprintln(os.Stderr, "--- end log ---")
 }
 
 func RunVM(binary string, args []string, confirm bool) error {
