@@ -1,4 +1,4 @@
-package main // Or your package name, e.g., 'cmd'
+package main
 
 import (
 	"bufio"
@@ -12,14 +12,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// os-dependent functions, aliased for testability
+// Aliased for test injection.
 var (
 	osReadFile = os.ReadFile
 	osStat     = os.Stat
 	osOpenFile = os.OpenFile
 )
 
-// NewCheckCmd creates the `check` subcommand for q2boot.
 func NewCheckCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "check",
@@ -40,7 +39,6 @@ It also provides installation hints for your specific operating system.`,
 	return cmd
 }
 
-// runChecks executes all the pre-flight checks in sequence.
 func runChecks() {
 	fmt.Println("🚀 Running pre-flight checks for q2boot dependencies...")
 
@@ -53,15 +51,13 @@ func runChecks() {
 	fmt.Println("\n✅ Pre-flight check complete.")
 }
 
-// checkKVM verifies that KVM is available and enabled on Linux.
 func checkKVM() bool {
 	fmt.Println("\n1. Verifying KVM availability (Linux only)")
 	if runtime.GOOS != "linux" {
 		fmt.Println("   - KVM check is not applicable on this OS.")
-		return true // Not a failure on non-Linux systems
+		return true
 	}
 
-	// Check for CPU virtualization support
 	cpuinfo, err := osReadFile("/proc/cpuinfo")
 	if err != nil {
 		fmt.Printf("   ❌ Could not read /proc/cpuinfo: %v\n", err)
@@ -74,7 +70,6 @@ func checkKVM() bool {
 	}
 	fmt.Println("   - CPU virtualization support is enabled.")
 
-	// Check for the /dev/kvm device file
 	if _, err := osStat("/dev/kvm"); os.IsNotExist(err) {
 		fmt.Println("   ❌ KVM kernel module is not loaded.")
 		fmt.Println("      -> Hint: Run 'sudo modprobe kvm_intel' or 'sudo modprobe kvm_amd'.")
@@ -82,7 +77,6 @@ func checkKVM() bool {
 	}
 	fmt.Println("   - KVM kernel module is loaded.")
 
-	// Check for read/write permissions on /dev/kvm
 	file, err := osOpenFile("/dev/kvm", os.O_RDWR, 0)
 	if err != nil {
 		fmt.Println("   ❌ /dev/kvm device is not accessible by the current user.")
@@ -96,7 +90,6 @@ func checkKVM() bool {
 	return true
 }
 
-// checkQEMU finds all available qemu-system-* binaries in the PATH.
 func checkQEMU() []string {
 	fmt.Println("\n2. Checking for QEMU binaries")
 	qemuPrefix := "qemu-system-"
@@ -110,7 +103,6 @@ func checkQEMU() []string {
 		}
 		for _, file := range files {
 			if !file.IsDir() && strings.HasPrefix(file.Name(), qemuPrefix) {
-				// Verify it's an executable file
 				if _, err := exec.LookPath(file.Name()); err == nil {
 					arch := strings.TrimPrefix(file.Name(), qemuPrefix)
 					foundArches[arch] = struct{}{}
@@ -132,53 +124,46 @@ func checkQEMU() []string {
 	return archList
 }
 
-// checkFirmware looks for optional but recommended firmware files.
 func checkFirmware() {
 	fmt.Println("\n3. Checking for optional UEFI firmware")
 
-	// Check for any file in the aarch64 EFI directory
 	aarch64EfiDir := "/usr/share/qemu-efi-aarch64/"
 	if files, err := os.ReadDir(aarch64EfiDir); err == nil && len(files) > 0 {
 		for _, file := range files {
 			if !file.IsDir() {
 				fmt.Printf("   ✅ Found aarch64 UEFI firmware: %s\n", filepath.Join(aarch64EfiDir, file.Name()))
-				return // Found, no need to check other locations
+				return
 			}
 		}
 	}
 
-	// Check for any .bin file in the general qemu directory
 	qemuDir := "/usr/share/qemu/"
 	if files, err := os.ReadDir(qemuDir); err == nil {
 		for _, file := range files {
 			if !file.IsDir() && strings.HasSuffix(file.Name(), ".bin") {
 				fmt.Printf("   ✅ Found firmware file: %s\n", filepath.Join(qemuDir, file.Name()))
-				return // Found, no need to check other locations
+				return
 			}
 		}
 	}
 
-	// If we've gotten this far, no firmware was found in the common locations.
 	fmt.Println("   - UEFI firmware not found in common locations (optional but recommended).")
 	fmt.Println("     -> Hint: For aarch64, install 'qemu-efi-aarch64' or 'edk2-aarch64'.")
 }
 
-// checkVirtCat verifies that virt-cat is installed for architecture auto-detection.
 func checkVirtCat() bool {
 	fmt.Println("\n4. Checking for virt-cat (for architecture auto-detection)")
 	if _, err := exec.LookPath("virt-cat"); err == nil {
 		fmt.Println("   ✅ virt-cat is installed and available in your PATH.")
 		return true
 	}
-
 	fmt.Println("   - virt-cat not found (optional, but needed for auto-detecting image architecture).")
 	return false
 }
 
-// printInstallHints provides OS-specific guidance for installing missing dependencies.
 func printInstallHints(kvmOk, qemuFound, virtCatOk bool) {
 	if kvmOk && qemuFound && virtCatOk {
-		return // No hints needed if everything is okay
+		return
 	}
 
 	fmt.Println("\n5. Installation Hints")
@@ -223,7 +208,6 @@ func printInstallHints(kvmOk, qemuFound, virtCatOk bool) {
 	}
 }
 
-// getLinuxDistro attempts to identify the Linux distribution from /etc/os-release.
 func getLinuxDistro() string {
 	file, err := os.Open("/etc/os-release")
 	if err != nil {

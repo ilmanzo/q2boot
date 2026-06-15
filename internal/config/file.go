@@ -6,9 +6,8 @@ import (
 	"os"
 )
 
-// Load reads and JSON-decodes a VMConfig from path. Fields absent from the
-// file keep their DefaultConfig values. The returned error wraps os.ErrNotExist
-// when the file is missing so callers can distinguish "first run".
+// Load returns os.ErrNotExist verbatim so callers can detect "first run".
+// Fields absent from the file keep their DefaultConfig values.
 func Load(path string) (*VMConfig, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -21,8 +20,6 @@ func Load(path string) (*VMConfig, error) {
 	return cfg, nil
 }
 
-// Save JSON-encodes cfg to path with 0600 perms (config may contain
-// host-port choices etc. — not secret, but no reason to be world-readable).
 func Save(path string, cfg *VMConfig) error {
 	data, err := json.MarshalIndent(cfg, "", "  ")
 	if err != nil {

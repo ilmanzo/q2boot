@@ -79,8 +79,8 @@ func init() {
 	setupFlags()
 }
 
-// setupFlags declares the persistent CLI flags. Each flag writes its value
-// into flagCfg; precedence (defaults < file < CLI) is applied in runQ2BootE.
+// Each flag writes into flagCfg; precedence (defaults < file < CLI) is
+// applied later by applyChangedFlags.
 func setupFlags() {
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(NewCheckCmd())
@@ -98,7 +98,6 @@ func setupFlags() {
 	pf.StringSliceVarP(&flagCfg.ExtraQemuArgs, "qemu-extra", "e", flagCfg.ExtraQemuArgs, "Extra arguments to pass to QEMU (can be specified multiple times)")
 }
 
-// testConfigDir is used by tests to override the default config location.
 var testConfigDir string
 
 func configPath() (string, string) {
@@ -111,9 +110,8 @@ func configPath() (string, string) {
 	return dir, filepath.Join(dir, "config.json")
 }
 
-// initConfig loads ~/.config/q2boot/config.json into cfg, falling back to
-// DefaultConfig if the file is missing (in which case the defaults are also
-// written out so users have something to edit).
+// initConfig loads ~/.config/q2boot/config.json, writing DefaultConfig out
+// on first run so the user has something to edit.
 func initConfig() {
 	dir, path := configPath()
 	if err := os.MkdirAll(dir, 0700); err != nil {
@@ -138,8 +136,7 @@ func initConfig() {
 	cfg = loaded
 }
 
-// applyChangedFlags overrides cfg fields with flagCfg values for any flag
-// the user actually passed on the command line.
+// applyChangedFlags is the CLI-wins step of the precedence chain.
 func applyChangedFlags(cmd *cobra.Command, cfg *config.VMConfig) {
 	pf := cmd.Flags()
 	if pf.Changed("cpu") {
@@ -188,14 +185,13 @@ func detectArchitecture(diskPath string) (string, error) {
 	return arch, nil
 }
 
-// runQ2BootE contains the core logic for running the VM, making it testable.
 func runQ2BootE(cmd *cobra.Command, args []string, cfg *config.VMConfig) error {
 	applyChangedFlags(cmd, cfg)
 	cfg.DiskPath = args[0]
 	remote := downloader.IsRemote(cfg.DiskPath)
 
-	// Reject the combination of a remote image and --write-mode: the local copy
-	// lives in a temp file we delete on exit, so any persistence intent is a lie.
+	// Remote + --write-mode is incoherent: the local copy lives in a temp
+	// file we delete on exit, so any "persisted" change vanishes.
 	if remote && cfg.WriteMode {
 		return fmt.Errorf("--write-mode cannot be used with a remote image (%s): changes would be discarded with the downloaded temp file. Download the image first, then pass the local path", cfg.DiskPath)
 	}
@@ -211,7 +207,6 @@ func runQ2BootE(cmd *cobra.Command, args []string, cfg *config.VMConfig) error {
 		return fmt.Errorf("disk image not accessible: %w", err)
 	}
 
-	// Auto-detect when no architecture is set anywhere (flag or file).
 	if cfg.Arch == "" {
 		detectedArch, err := detectArchitecture(cfg.DiskPath)
 		if err != nil {

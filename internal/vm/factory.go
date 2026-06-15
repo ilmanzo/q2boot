@@ -2,8 +2,7 @@ package vm
 
 import "fmt"
 
-// CreateVM creates a VM instance based on the specified architecture.
-// Declared as a var so tests can substitute it (see internal/vm/mock_vm.go).
+// CreateVM is a var so tests can swap it (see mock_vm.go).
 var CreateVM = func(arch string) (VM, error) {
 	spec, ok := specFor(arch)
 	if !ok {
@@ -12,7 +11,6 @@ var CreateVM = func(arch string) (VM, error) {
 	return newArchVM(spec), nil
 }
 
-// SupportedArchitectures returns the list of architectures q2boot knows about.
 func SupportedArchitectures() []string {
 	out := make([]string, len(archSpecs))
 	for i, s := range archSpecs {
@@ -34,7 +32,6 @@ func GetQEMUBinaryForArch(arch string) (string, error) {
 	return spec.Binary, nil
 }
 
-// CheckAvailableQEMUBinaries returns arch → whether qemu-system-<arch> is on PATH.
 func CheckAvailableQEMUBinaries() map[string]bool {
 	out := make(map[string]bool, len(archSpecs))
 	for _, s := range archSpecs {
@@ -53,9 +50,8 @@ func GetMissingQEMUBinaries() []string {
 	return missing
 }
 
-// GetInstallationInstructions returns per-distro install hints for an arch's
-// QEMU binary. Lookup is by binary name (not arch) to keep the public API
-// stable for the version/check commands.
+// GetInstallationInstructions is keyed by binary name (not arch) so the
+// version/check commands can call it with the QEMU binary they probed.
 func GetInstallationInstructions(binary string) string {
 	pkgs := InstallPkgs{"qemu-system", "unknown", "unknown"}
 	for _, s := range archSpecs {

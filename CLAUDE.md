@@ -20,7 +20,7 @@ Release builds bake `version`/`commit`/`buildTime` via `-ldflags` (see Makefile)
 
 ## Architecture
 
-Entry: `cmd/q2boot/main.go` (cobra + viper). Subcommands: root `runQ2Boot`, `version`, `check` (`check.go`).
+Entry: `cmd/q2boot/main.go` (cobra). Subcommands: root `runQ2Boot`, `version`, `check` (`check.go`).
 
 Flow in `runQ2BootE`:
 1. `applyChangedFlags` overlays CLI flag values onto the file-loaded `*config.VMConfig`. Precedence: **CLI flag > config file > defaults**. Bool/port detection uses `cmd.Flags().Changed(name)`. There is no viper; merge is explicit code in `main.go`.
@@ -46,7 +46,7 @@ Data-table architecture. **All four QEMU architectures share one implementation*
 
 ### Config (`internal/config`)
 
-`VMConfig` is a plain struct with `json` tags. `config.Load(path)` / `config.Save(path, cfg)` use stdlib `encoding/json` — viper was removed. `mapstructure` tags are still present for historical compatibility but are no longer consumed. `Validate()` enforces only pure value ranges (CPU, RAM, port bounds, DiskPath non-empty); disk-existence is checked at the call site in `main.go`.
+`VMConfig` is a plain struct with `json` tags. `config.Load(path)` / `config.Save(path, cfg)` use stdlib `encoding/json` — viper was removed. `Validate()` enforces only pure value ranges (CPU, RAM, port bounds, DiskPath non-empty); disk-existence is checked at the call site in `main.go`.
 
 ### Adding a new architecture
 
@@ -59,4 +59,3 @@ That's it. `factory.go` and the version/check commands derive everything they ne
 
 - `cmd/q2boot/check.go` aliases `os.ReadFile`/`os.Stat`/`os.OpenFile` as package vars for test injection — preserve this when editing.
 - Defaults live in one place: `config.DefaultConfig()` in `internal/config`. `flagCfg` in `main.go` is initialised from it so cobra flag defaults match the documented values.
-- The `mapstructure` struct tags on `VMConfig` are vestigial (viper is gone). Safe to delete on the next sweep.

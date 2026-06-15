@@ -11,9 +11,6 @@ import (
 	"github.com/ilmanzo/q2boot/internal/config"
 )
 
-// VM build-time constants. CPU/RAM/port defaults live in internal/config so
-// the config layer owns them; this file only needs literals used inside
-// composed QEMU args.
 const (
 	LocalhostAddress   = "127.0.0.1"
 	TCPNetworkProtocol = "tcp"
@@ -24,7 +21,6 @@ const (
 	SerialConsoleStdio = "stdio"
 )
 
-// VM interface defines the methods that all VM implementations must provide
 type VM interface {
 	QEMUBinary() string
 	GetArchArgs() []string
@@ -37,29 +33,24 @@ type VM interface {
 	Run() error
 }
 
-// BaseVM provides common functionality for all VM implementations.
-//
-// VMConfig is embedded so all CPU/RAM/port/disk/log fields are accessed
-// directly (v.CPU, v.RAMGb, v.WriteMode, etc.) without any copy or rename.
-// self holds the embedding concrete type so promoted Validate()/Run() can
-// dispatch to the architecture-specific methods. Set by each constructor.
+// BaseVM embeds VMConfig so concrete arch types read v.CPU/v.RAMGb/etc.
+// directly. `self` holds the embedding concrete type so the promoted
+// Validate/Run can dispatch into the arch-specific methods; constructors
+// MUST set it or BaseVM.Validate/Run nil-derefs.
 type BaseVM struct {
 	*config.VMConfig
 	self         VM
 	FirmwarePath string
 }
 
-// NewBaseVM creates a new BaseVM with the package defaults.
 func NewBaseVM() *BaseVM {
 	return &BaseVM{VMConfig: config.DefaultConfig()}
 }
 
-// Configure swaps in the user-supplied VMConfig (preserves FirmwarePath).
 func (v *BaseVM) Configure(cfg *config.VMConfig) {
 	v.VMConfig = cfg
 }
 
-// ValidateQEMUBinary checks if the specified QEMU binary is installed and available
 func ValidateQEMUBinary(binary string) error {
 	_, err := exec.LookPath(binary)
 	if err != nil {
@@ -69,7 +60,6 @@ func ValidateQEMUBinary(binary string) error {
 	return nil
 }
 
-// IsPortAvailable checks if a port is available for binding
 func IsPortAvailable(port uint16) bool {
 	listener, err := net.Listen(TCPNetworkProtocol, fmt.Sprintf("%s:%d", LocalhostAddress, port))
 	if err != nil {
@@ -79,7 +69,6 @@ func IsPortAvailable(port uint16) bool {
 	return true
 }
 
-// ValidatePortsAvailable checks if the required ports (SSH and monitor) are available
 func ValidatePortsAvailable(sshPort, monitorPort uint16) error {
 	if !IsPortAvailable(sshPort) {
 		return fmt.Errorf("SSH port %d is already in use. Please choose a different port using --ssh-port", sshPort)
@@ -92,7 +81,6 @@ func ValidatePortsAvailable(sshPort, monitorPort uint16) error {
 	return nil
 }
 
-// Validate checks the VM configuration for potential issues.
 func (v *BaseVM) Validate() error {
 	if err := ValidateQEMUBinary(v.self.QEMUBinary()); err != nil {
 		return err
@@ -106,71 +94,47 @@ func (v *BaseVM) Validate() error {
 	return nil
 }
 
-// buildArgs builds the QEMU command line arguments, containing
-// logic common to all architectures. It relies on the passed-in VM interface to get
-// architecture-specific details.
 func (v *BaseVM) buildArgs(vm VM, extraArgs []string) []string {
 	var args []string
-
-	// Add architecture-specific arguments
 	args = append(args, vm.GetArchArgs()...)
-
-	// Add common arguments
 	args = append(args, "-smp", fmt.Sprintf("%d", v.CPU))
 	args = append(args, "-m", fmt.Sprintf("%dG", v.RAMGb))
-
-	// Add disk arguments
 	args = append(args, vm.GetDiskArgs()...)
-
-	// Add network arguments
 	args = append(args, vm.GetNetworkArgs()...)
-
-	// Add any extra arguments (e.g., for cloud-init)
 	if extraArgs != nil {
 		args = append(args, extraArgs...)
 	}
-
-	// Append user-provided extra QEMU arguments
 	if len(v.ExtraQemuArgs) > 0 {
 		args = append(args, v.ExtraQemuArgs...)
 	}
-
-	// Add audio device (disabled)
 	args = append(args, "-audiodev", fmt.Sprintf("%s,id=%s", AudioDeviceType, AudioDeviceID))
 
-	// Handle display mode
 	if v.Graphical {
 		graphicalArgs := vm.GetGraphicalArgs()
 		args = append(args, graphicalArgs...)
-		// If graphical mode is implemented via -nographic (e.g., for s390x),
-		// we must disable the default monitor to avoid stdio conflicts.
+		// Graphical-via-`-nographic` (s390x) takes over stdio; suppress the
+		// default monitor to avoid a conflict.
 		if slices.Contains(graphicalArgs, "-nographic") {
 			args = append(args, "-monitor", "none")
 		}
 	} else {
-		nonGraphicalDisplayArgs := vm.GetNonGraphicalDisplayArgs()
-		args = append(args, nonGraphicalDisplayArgs...)
+		args = append(args, vm.GetNonGraphicalDisplayArgs()...)
 		if !v.WriteMode {
 			args = append(args, SnapshotArgument)
 		}
 	}
 
-	// Handle monitor configuration
 	if v.MonitorPort > 0 {
-		// If mon:stdio is already in use, don't add a separate monitor.
 		if !slices.Contains(args, "mon:stdio") {
 			args = append(args, "-monitor", fmt.Sprintf("%s:%s:%d,server,nowait", MonitorProtocol, LocalhostAddress, v.MonitorPort))
 		}
 	} else if !v.Graphical {
-		// For console modes, disable the interactive monitor on stdio by default
-		// unless it's already handled (e.g. for s390x).
+		// Console mode without an explicit monitor would otherwise grab stdio.
 		if !slices.Contains(args, "-monitor") && !slices.Contains(args, "mon:stdio") {
 			args = append(args, "-monitor", "none")
 		}
 	}
-	// For graphical modes, the default monitor is usually in the GUI window, which is fine.
 
-	// Add logging arguments
 	if v.LogFile != "" {
 		args = append(args, "-chardev", fmt.Sprintf("stdio,mux=on,id=char0,logfile=%s,signal=off", v.LogFile))
 		args = append(args, "-mon", "chardev=char0,mode=readline")
@@ -180,13 +144,11 @@ func (v *BaseVM) buildArgs(vm VM, extraArgs []string) []string {
 	return args
 }
 
-// Run executes the VM, delegating arch-specific calls through self.
 func (v *BaseVM) Run() error {
 	args := v.buildArgs(v.self, nil)
 	return RunVM(v.self.QEMUBinary(), args, v.Confirm)
 }
 
-// RunVM executes the VM with the given binary and arguments.
 func RunVM(binary string, args []string, confirm bool) error {
 	fmt.Println("Starting QEMU with the following command:")
 	fmt.Printf("  %s %s\n", binary, strings.Join(args, " "))
