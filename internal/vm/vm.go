@@ -11,16 +11,13 @@ import (
 	"github.com/ilmanzo/q2boot/internal/config"
 )
 
-// VM configuration constants
+// VM build-time constants. CPU/RAM/port defaults live in internal/config so
+// the config layer owns them; this file only needs literals used inside
+// composed QEMU args.
 const (
-	DefaultCPUCount      = 2
-	DefaultRAMGB         = 2
-	DefaultSSHPort       = 2222
-	DefaultMonitorPort   = 0 // 0 means disabled
-	DefaultLogFile       = "q2boot.log"
-	LocalhostAddress     = "127.0.0.1"
-	TCPNetworkProtocol   = "tcp"
-	MonitorProtocol      = "telnet"
+	LocalhostAddress   = "127.0.0.1"
+	TCPNetworkProtocol = "tcp"
+	MonitorProtocol    = "telnet"
 	AudioDeviceID      = "snd0"
 	AudioDeviceType    = "none"
 	SnapshotArgument   = "-snapshot"
@@ -41,51 +38,25 @@ type VM interface {
 }
 
 // BaseVM provides common functionality for all VM implementations.
+//
+// VMConfig is embedded so all CPU/RAM/port/disk/log fields are accessed
+// directly (v.CPU, v.RAMGb, v.WriteMode, etc.) without any copy or rename.
 // self holds the embedding concrete type so promoted Validate()/Run() can
-// dispatch to the architecture-specific methods. Set by each NewXxxVM().
+// dispatch to the architecture-specific methods. Set by each constructor.
 type BaseVM struct {
-	self          VM
-	DiskPath      string
-	CPU           int
-	RAM           int
-	Graphical     bool
-	NoSnapshot    bool
-	Confirm       bool
-	SSHPort       uint16
-	MonitorPort   uint16
-	LogFile       string
-	FirmwarePath  string
-	ExtraQemuArgs []string
+	*config.VMConfig
+	self         VM
+	FirmwarePath string
 }
 
-// NewBaseVM creates a new BaseVM with default settings
+// NewBaseVM creates a new BaseVM with the package defaults.
 func NewBaseVM() *BaseVM {
-	return &BaseVM{
-		CPU:         DefaultCPUCount,
-		RAM:         DefaultRAMGB,
-		SSHPort:     DefaultSSHPort,
-		MonitorPort: DefaultMonitorPort,
-		LogFile:     DefaultLogFile,
-		Graphical:   false,
-		NoSnapshot:  false,
-		Confirm:     false,
-	}
+	return &BaseVM{VMConfig: config.DefaultConfig()}
 }
 
-// Configure sets up the VM with the provided configuration
+// Configure swaps in the user-supplied VMConfig (preserves FirmwarePath).
 func (v *BaseVM) Configure(cfg *config.VMConfig) {
-	v.CPU = cfg.CPU
-	v.RAM = cfg.RAMGb
-	v.SSHPort = cfg.SSHPort
-	v.MonitorPort = cfg.MonitorPort
-	v.LogFile = cfg.LogFile
-	v.Graphical = cfg.Graphical
-	v.NoSnapshot = cfg.WriteMode
-	v.Confirm = cfg.Confirm
-	if cfg.DiskPath != "" {
-		v.DiskPath = cfg.DiskPath
-	}
-	v.ExtraQemuArgs = cfg.ExtraQemuArgs
+	v.VMConfig = cfg
 }
 
 // ValidateQEMUBinary checks if the specified QEMU binary is installed and available
@@ -146,7 +117,7 @@ func (v *BaseVM) buildArgs(vm VM, extraArgs []string) []string {
 
 	// Add common arguments
 	args = append(args, "-smp", fmt.Sprintf("%d", v.CPU))
-	args = append(args, "-m", fmt.Sprintf("%dG", v.RAM))
+	args = append(args, "-m", fmt.Sprintf("%dG", v.RAMGb))
 
 	// Add disk arguments
 	args = append(args, vm.GetDiskArgs()...)
@@ -179,7 +150,7 @@ func (v *BaseVM) buildArgs(vm VM, extraArgs []string) []string {
 	} else {
 		nonGraphicalDisplayArgs := vm.GetNonGraphicalDisplayArgs()
 		args = append(args, nonGraphicalDisplayArgs...)
-		if !v.NoSnapshot {
+		if !v.WriteMode {
 			args = append(args, SnapshotArgument)
 		}
 	}

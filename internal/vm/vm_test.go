@@ -14,29 +14,23 @@ func TestNewBaseVM(t *testing.T) {
 	if vm.CPU != 2 {
 		t.Errorf("Expected CPU to be 2, got %d", vm.CPU)
 	}
-
-	if vm.RAM != 2 {
-		t.Errorf("Expected RAM to be 2, got %d", vm.RAM)
+	if vm.RAMGb != 2 {
+		t.Errorf("Expected RAMGb to be 2, got %d", vm.RAMGb)
 	}
-
 	if vm.SSHPort != 2222 {
 		t.Errorf("Expected SSHPort to be 2222, got %d", vm.SSHPort)
 	}
-
 	if vm.LogFile != "q2boot.log" {
 		t.Errorf("Expected LogFile to be q2boot.log, got %s", vm.LogFile)
 	}
-
-	if vm.Graphical != false {
-		t.Errorf("Expected Graphical to be false, got %t", vm.Graphical)
+	if vm.Graphical {
+		t.Errorf("Expected Graphical to be false")
 	}
-
-	if vm.NoSnapshot != false {
-		t.Errorf("Expected NoSnapshot to be false, got %t", vm.NoSnapshot)
+	if vm.WriteMode {
+		t.Errorf("Expected WriteMode to be false")
 	}
-
-	if vm.Confirm != false {
-		t.Errorf("Expected Confirm to be false, got %t", vm.Confirm)
+	if vm.Confirm {
+		t.Errorf("Expected Confirm to be false")
 	}
 }
 
@@ -60,8 +54,8 @@ func TestBaseConfigure(t *testing.T) {
 		t.Errorf("Expected CPU to be %d, got %d", cfg.CPU, vm.CPU)
 	}
 
-	if vm.RAM != cfg.RAMGb {
-		t.Errorf("Expected RAM to be %d, got %d", cfg.RAMGb, vm.RAM)
+	if vm.RAMGb != cfg.RAMGb {
+		t.Errorf("Expected RAMGb to be %d, got %d", cfg.RAMGb, vm.RAMGb)
 	}
 
 	if vm.SSHPort != cfg.SSHPort {
@@ -76,8 +70,8 @@ func TestBaseConfigure(t *testing.T) {
 		t.Errorf("Expected Graphical to be %t, got %t", vm.Graphical, vm.Graphical)
 	}
 
-	if vm.NoSnapshot != cfg.WriteMode {
-		t.Errorf("Expected NoSnapshot to be %t, got %t", cfg.WriteMode, vm.NoSnapshot)
+	if vm.WriteMode != cfg.WriteMode {
+		t.Errorf("Expected WriteMode to be %t, got %t", cfg.WriteMode, vm.WriteMode)
 	}
 
 	if vm.Confirm != cfg.Confirm {
@@ -457,7 +451,7 @@ func TestBuildArgs(t *testing.T) {
 			name: "default non-graphical",
 			setupVM: func(vm *MockVM) {
 				vm.Graphical = false
-				vm.NoSnapshot = false
+				vm.WriteMode = false
 			},
 			wantArgs:    []string{"-snapshot", "-display", "mock-headless", "-monitor", "none"},
 			notWantArgs: []string{},
@@ -466,7 +460,7 @@ func TestBuildArgs(t *testing.T) {
 			name: "non-graphical with write mode",
 			setupVM: func(vm *MockVM) {
 				vm.Graphical = false
-				vm.NoSnapshot = true
+				vm.WriteMode = true
 			},
 			wantArgs:    []string{"-display", "mock-headless", "-monitor", "none"},
 			notWantArgs: []string{"-snapshot"},
@@ -503,7 +497,7 @@ func TestBuildArgs(t *testing.T) {
 			name: "common args present",
 			setupVM: func(vm *MockVM) {
 				vm.CPU = 4
-				vm.RAM = 8
+				vm.RAMGb = 8
 				vm.DiskPath = "/tmp/disk.qcow2"
 			},
 			wantArgs: []string{
