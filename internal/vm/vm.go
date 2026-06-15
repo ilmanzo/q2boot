@@ -159,6 +159,11 @@ func RunVM(binary string, args []string, confirm bool) error {
 		fmt.Scanln(&input)
 	}
 
+	// exec.Command takes an explicit argv (no shell), so user-supplied
+	// --qemu-extra strings cannot inject extra commands via metacharacters
+	// — each element becomes one argv slot verbatim. They CAN still pass
+	// arbitrary QEMU flags, which is the point of the feature; the boundary
+	// here is "no shell injection", not "no QEMU misuse".
 	cmd := exec.Command(binary, args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
