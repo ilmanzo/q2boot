@@ -127,6 +127,20 @@ func downloadHTTP(url, dest string) error {
 	return nil
 }
 
+// IsTTY reports whether stdout is a character device (terminal). When false
+// the carriage-return progress bar would just spam log files, so callers
+// switch to a quieter newline-per-step mode.
+//
+// stdout.Stat() may fail in odd environments (closed fd, runtime bugs); we
+// conservatively assume non-TTY in that case.
+var IsTTY = func() bool {
+	st, err := os.Stdout.Stat()
+	if err != nil {
+		return false
+	}
+	return st.Mode()&os.ModeCharDevice != 0
+}
+
 type ProgressReader struct {
 	io.Reader
 	Total       int64
@@ -137,14 +151,22 @@ type ProgressReader struct {
 func (pr *ProgressReader) Read(p []byte) (int, error) {
 	n, err := pr.Reader.Read(p)
 	pr.Current += int64(n)
+	tty := IsTTY()
 
 	if pr.Total > 0 {
 		percent := int(float64(pr.Current) / float64(pr.Total) * 100)
 		if percent > pr.LastPercent {
-			pr.LastPercent = percent
-			fmt.Printf("\rDownloading... %d%%", percent)
+			// On TTY: overwrite with \r every percent. On a pipe/file: only
+			// emit at 10% boundaries with a newline so logs stay scannable.
+			if tty {
+				pr.LastPercent = percent
+				fmt.Printf("\rDownloading... %d%%", percent)
+			} else if percent/10 > pr.LastPercent/10 {
+				pr.LastPercent = percent
+				fmt.Printf("Downloading... %d%%\n", percent)
+			}
 		}
-	} else {
+	} else if tty {
 		const mb = 1024 * 1024
 		if pr.Current/mb > (pr.Current-int64(n))/mb {
 			fmt.Printf("\rDownloading... %d MB", pr.Current/mb)

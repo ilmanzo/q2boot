@@ -1,6 +1,8 @@
 package downloader
 
 import (
+	"bytes"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -52,5 +54,22 @@ func TestVerifySHA256(t *testing.T) {
 	}
 	if err := VerifySHA256("/no/such/file", helloHash); err == nil {
 		t.Error("missing file accepted")
+	}
+}
+
+func TestProgressReaderNonTTY(t *testing.T) {
+	// Force non-TTY mode; should not crash and should still consume the stream.
+	origTTY := IsTTY
+	IsTTY = func() bool { return false }
+	defer func() { IsTTY = origTTY }()
+
+	data := bytes.Repeat([]byte{0xAB}, 1024)
+	pr := &ProgressReader{Reader: bytes.NewReader(data), Total: int64(len(data))}
+	n, err := io.Copy(io.Discard, pr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n != int64(len(data)) {
+		t.Errorf("read %d bytes, want %d", n, len(data))
 	}
 }
