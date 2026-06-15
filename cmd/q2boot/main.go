@@ -111,9 +111,10 @@ func setupFlags() {
 	rootCmd.PersistentFlags().Uint16VarP(&flags.MonitorPort, "monitor-port", "m", 0, "Port for the QEMU monitor (telnet)")
 	rootCmd.PersistentFlags().StringSliceVarP(&flags.ExtraQemuArgs, "qemu-extra", "e", []string{}, "Extra arguments to pass to QEMU (can be specified multiple times)")
 
-	// Bind flags to viper
+	// Bind flags to viper. The key MUST match the VMConfig mapstructure tag,
+	// otherwise viper.Unmarshal silently ignores the flag value.
 	viper.BindPFlag("cpu", rootCmd.PersistentFlags().Lookup("cpu"))
-	viper.BindPFlag("ram", rootCmd.PersistentFlags().Lookup("ram"))
+	viper.BindPFlag("ram_gb", rootCmd.PersistentFlags().Lookup("ram"))
 	viper.BindPFlag("arch", rootCmd.PersistentFlags().Lookup("arch"))
 	viper.BindPFlag("ssh_port", rootCmd.PersistentFlags().Lookup("ssh-port"))
 	viper.BindPFlag("log_file", rootCmd.PersistentFlags().Lookup("log-file"))
