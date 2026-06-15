@@ -2,7 +2,6 @@ package vm
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"os"
 	"os/exec"
@@ -29,40 +28,24 @@ const (
 	DisplayModeGraphical = "curses"
 )
 
-var logger *log.Logger
-
 // VM interface defines the methods that all VM implementations must provide
 type VM interface {
-	// QEMUBinary returns the name of the QEMU binary for the specific architecture
 	QEMUBinary() string
-
-	// GetArchArgs returns architecture-specific QEMU arguments
 	GetArchArgs() []string
-
-	// GetDiskArgs returns disk-specific QEMU arguments
 	GetDiskArgs() []string
-
-	// GetNetworkArgs returns network-specific QEMU arguments
 	GetNetworkArgs() []string
-
-	// GetGraphicalArgs returns graphical mode QEMU arguments
 	GetGraphicalArgs() []string
-
-	// GetNonGraphicalDisplayArgs returns display arguments for non-graphical mode
 	GetNonGraphicalDisplayArgs() []string
-
-	// Configure sets up the VM with the provided configuration
 	Configure(cfg *config.VMConfig)
-
-	// SetDiskPath sets the disk image path
-	SetDiskPath(path string)
-
 	Validate() error
 	Run() error
 }
 
-// BaseVM provides common functionality for all VM implementations
+// BaseVM provides common functionality for all VM implementations.
+// self holds the embedding concrete type so promoted Validate()/Run() can
+// dispatch to the architecture-specific methods. Set by each NewXxxVM().
 type BaseVM struct {
+	self          VM
 	DiskPath      string
 	CPU           int
 	RAM           int
@@ -104,11 +87,6 @@ func (v *BaseVM) Configure(cfg *config.VMConfig) {
 		v.DiskPath = cfg.DiskPath
 	}
 	v.ExtraQemuArgs = cfg.ExtraQemuArgs
-}
-
-// SetDiskPath sets the disk image path
-func (v *BaseVM) SetDiskPath(path string) {
-	v.DiskPath = path
 }
 
 // GetNonGraphicalDisplayArgs returns display arguments for non-graphical mode
@@ -176,18 +154,13 @@ func ValidatePortsAvailable(sshPort, monitorPort uint16) error {
 }
 
 // Validate checks the VM configuration for potential issues.
-func (v *BaseVM) Validate(vm VM) error {
-	// 1. Validate QEMU binary
-	if err := ValidateQEMUBinary(vm.QEMUBinary()); err != nil {
+func (v *BaseVM) Validate() error {
+	if err := ValidateQEMUBinary(v.self.QEMUBinary()); err != nil {
 		return err
 	}
-
-	// 2. Validate ports
 	if err := ValidatePortsAvailable(v.SSHPort, v.MonitorPort); err != nil {
 		return err
 	}
-
-	// 3. Validate disk path
 	if v.DiskPath == "" {
 		return fmt.Errorf("disk image path is not set")
 	}
@@ -268,17 +241,16 @@ func (v *BaseVM) buildArgs(vm VM, extraArgs []string) []string {
 	return args
 }
 
-// run is a helper to execute the VM, containing logic common to all architectures.
-func (v *BaseVM) run(vm VM) error {
-	args := v.buildArgs(vm, nil)
-	return RunVM(vm.QEMUBinary(), args, v.Confirm)
+// Run executes the VM, delegating arch-specific calls through self.
+func (v *BaseVM) Run() error {
+	args := v.buildArgs(v.self, nil)
+	return RunVM(v.self.QEMUBinary(), args, v.Confirm)
 }
 
 // RunVM executes the VM with the given binary and arguments.
-// The cleanup function is optional and will be called if the VM exits.
 func RunVM(binary string, args []string, confirm bool) error {
 	fmt.Println("Starting QEMU with the following command:")
-	fmt.Println("Command", "binary", binary, "args", strings.Join(args, " "))
+	fmt.Printf("  %s %s\n", binary, strings.Join(args, " "))
 
 	if confirm {
 		fmt.Print("Press Enter to continue...")
@@ -294,12 +266,9 @@ func RunVM(binary string, args []string, confirm bool) error {
 	err := cmd.Run()
 	if err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
-			fmt.Println("QEMU exited with error", "status", exitError.ExitCode())
 			return fmt.Errorf("QEMU exited with status %d", exitError.ExitCode())
 		}
-		fmt.Println("Failed to start QEMU", "error", err)
 		return fmt.Errorf("failed to start QEMU: %w", err)
 	}
-
 	return nil
 }

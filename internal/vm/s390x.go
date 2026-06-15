@@ -11,9 +11,9 @@ type S390XVM struct {
 
 // NewS390XVM creates a new S390XVM instance
 func NewS390XVM() *S390XVM {
-	return &S390XVM{
-		BaseVM: NewBaseVM(),
-	}
+	vm := &S390XVM{BaseVM: NewBaseVM()}
+	vm.self = vm
+	return vm
 }
 
 // QEMUBinary returns the QEMU binary name for s390x
@@ -68,14 +68,4 @@ func (vm *S390XVM) GetGraphicalArgs() []string {
 // s390x uses nographic mode with serial console instead of curses
 func (vm *S390XVM) GetNonGraphicalDisplayArgs() []string {
 	return []string{"-nographic"}
-}
-
-// Validate checks the VM configuration and satisfies the VM interface.
-func (vm *S390XVM) Validate() error {
-	return vm.BaseVM.Validate(vm)
-}
-
-// Run executes the VM and satisfies the VM interface.
-func (vm *S390XVM) Run() error {
-	return vm.run(vm)
 }

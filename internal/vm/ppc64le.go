@@ -11,9 +11,9 @@ type PPC64LEVM struct {
 
 // NewPPC64LEVM creates a new PPC64LEVM instance
 func NewPPC64LEVM() *PPC64LEVM {
-	return &PPC64LEVM{
-		BaseVM: NewBaseVM(),
-	}
+	vm := &PPC64LEVM{BaseVM: NewBaseVM()}
+	vm.self = vm
+	return vm
 }
 
 // QEMUBinary returns the QEMU binary name for ppc64le
@@ -61,14 +61,4 @@ func (vm *PPC64LEVM) GetGraphicalArgs() []string {
 // ppc64le works better with nographic mode and serial stdio instead of curses
 func (vm *PPC64LEVM) GetNonGraphicalDisplayArgs() []string {
 	return []string{"-nographic"}
-}
-
-// Validate checks the VM configuration and satisfies the VM interface.
-func (vm *PPC64LEVM) Validate() error {
-	return vm.BaseVM.Validate(vm)
-}
-
-// Run executes the VM and satisfies the VM interface.
-func (vm *PPC64LEVM) Run() error {
-	return vm.run(vm)
 }

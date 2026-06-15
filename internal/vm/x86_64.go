@@ -11,9 +11,9 @@ type X86_64VM struct {
 
 // NewX86_64VM creates a new X86_64VM instance
 func NewX86_64VM() *X86_64VM {
-	return &X86_64VM{
-		BaseVM: NewBaseVM(),
-	}
+	vm := &X86_64VM{BaseVM: NewBaseVM()}
+	vm.self = vm
+	return vm
 }
 
 // QEMUBinary returns the QEMU binary name for x86_64
@@ -60,14 +60,4 @@ func (vm *X86_64VM) GetNonGraphicalDisplayArgs() []string {
 	return []string{
 		"-nographic", "-serial", "mon:stdio",
 	}
-}
-
-// Validate checks the VM configuration and satisfies the VM interface.
-func (vm *X86_64VM) Validate() error {
-	return vm.BaseVM.Validate(vm)
-}
-
-// Run executes the VM and satisfies the VM interface.
-func (vm *X86_64VM) Run() error {
-	return vm.run(vm)
 }

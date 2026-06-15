@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -13,15 +12,6 @@ import (
 	"github.com/ilmanzo/q2boot/internal/detector"
 	"github.com/ilmanzo/q2boot/internal/downloader"
 	"github.com/ilmanzo/q2boot/internal/vm"
-)
-
-// Configuration directory constants
-const (
-	ConfigDirPermissions = 0700 // Owner read/write/execute only for security
-	ConfigDirName        = ".config"
-	AppConfigDirName     = "q2boot"
-	ConfigFileName       = "config"
-	ConfigFileFormat     = "json"
 )
 
 // Flags holds all command-line flag values
@@ -69,13 +59,12 @@ var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print version information",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Q2Boot version", "version", version)
-		fmt.Println("Git commit", "commit", commit)
-		fmt.Println("Build time", "time", buildTime)
-		fmt.Println("Supported architectures", "archs", vm.SupportedArchitectures())
+		fmt.Printf("Q2Boot version: %s\n", version)
+		fmt.Printf("Git commit:     %s\n", commit)
+		fmt.Printf("Build time:     %s\n", buildTime)
+		fmt.Printf("Supported architectures: %v\n", vm.SupportedArchitectures())
 
-		// Show QEMU binary availability
-		fmt.Println("QEMU Binary Availability")
+		fmt.Println("\nQEMU Binary Availability:")
 		availability := vm.CheckAvailableQEMUBinaries()
 		for _, arch := range vm.SupportedArchitectures() {
 			status := "❌ Not Available"
@@ -83,22 +72,16 @@ var versionCmd = &cobra.Command{
 				status = "✅ Available"
 			}
 			binary, _ := vm.GetQEMUBinaryForArch(arch)
-			fmt.Println("Architecture", "arch", arch, "binary", binary, "status", status)
+			fmt.Printf("  %-8s %-22s %s\n", arch, binary, status)
 		}
 
 		missing := vm.GetMissingQEMUBinaries()
 		if len(missing) > 0 {
-			fmt.Println("To install missing QEMU binaries")
+			fmt.Println("\nTo install missing QEMU binaries:")
 			for _, arch := range missing {
 				binary, _ := vm.GetQEMUBinaryForArch(arch)
-				fmt.Println("Missing binary", "arch", arch, "binary", binary)
-				instructions := vm.GetInstallationInstructions(binary)
-				lines := strings.Split(instructions, "\n")
-				for _, line := range lines {
-					if line != "" {
-						fmt.Println("Instruction", "text", line)
-					}
-				}
+				fmt.Printf("- %s (%s):\n", arch, binary)
+				fmt.Println(vm.GetInstallationInstructions(binary))
 			}
 		}
 	},
@@ -145,31 +128,26 @@ func setupFlags() {
 var testConfigDir string
 
 func initConfig() {
-	var configDir, configFile string
+	var configDir string
 
 	if testConfigDir != "" {
 		configDir = testConfigDir
-		configFile = filepath.Join(configDir, ConfigFileName)
 	} else {
 		home, err := os.UserHomeDir()
 		cobra.CheckErr(err)
-
-		configDir = filepath.Join(home, ConfigDirName, AppConfigDirName)
-		configFile = filepath.Join(configDir, ConfigFileName)
+		configDir = filepath.Join(home, ".config", "q2boot")
 	}
+	configFile := filepath.Join(configDir, "config.json")
 
-	// Create config directory if it doesn't exist
-	if err := os.MkdirAll(configDir, ConfigDirPermissions); err != nil {
-		fmt.Println("Error creating config directory", "path", configDir, "error", err)
+	if err := os.MkdirAll(configDir, 0700); err != nil {
+		fmt.Printf("Error creating config directory %s: %v\n", configDir, err)
 		return
 	}
 
-	// Configure viper
-	viper.SetConfigName(ConfigFileName)
-	viper.SetConfigType(ConfigFileFormat)
+	viper.SetConfigName("config")
+	viper.SetConfigType("json")
 	viper.AddConfigPath(configDir)
 
-	// Set defaults
 	viper.SetDefault("arch", "")
 	viper.SetDefault("cpu", config.DefaultCPU)
 	viper.SetDefault("ram_gb", config.DefaultRAMGb)
@@ -180,23 +158,20 @@ func initConfig() {
 	viper.SetDefault("confirm", false)
 	viper.SetDefault("extra_qemu_args", []string{})
 
-	// Read config file
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-			// Config file not found, create default
-			fmt.Println("No config file found. Creating default config", "path", configFile+"."+ConfigFileFormat)
-			if err := viper.WriteConfigAs(configFile + "." + ConfigFileFormat); err != nil {
-				fmt.Println("Error creating config file", "path", configFile+"."+ConfigFileFormat, "error", err)
+			fmt.Printf("No config file found. Creating default at %s\n", configFile)
+			if err := viper.WriteConfigAs(configFile); err != nil {
+				fmt.Printf("Error creating config file %s: %v\n", configFile, err)
 			}
 		} else {
-			fmt.Println("Error reading config file", "error", err)
+			fmt.Printf("Error reading config file: %v\n", err)
 		}
 	}
 
-	// Create config struct
 	cfg = &config.VMConfig{}
 	if err := viper.Unmarshal(cfg); err != nil {
-		fmt.Println("Error unmarshaling config", "error", err)
+		fmt.Printf("Error unmarshaling config: %v\n", err)
 		cfg = config.DefaultConfig()
 	}
 }
@@ -244,12 +219,12 @@ func applyFlagOverrides(cmd *cobra.Command, f *Flags, cfg *config.VMConfig, disk
 // detectArchitecture automatically detects the architecture from the disk image.
 // This is called when no explicit architecture was provided via flag.
 func detectArchitecture(diskPath string) (string, error) {
-	fmt.Println("Attempting to detect architecture from disk image", "disk", diskPath)
+	fmt.Printf("Attempting to detect architecture from disk image: %s\n", diskPath)
 	arch, err := detector.DetectArchitecture(diskPath)
 	if err != nil {
 		return "", err
 	}
-	fmt.Println("Successfully detected architecture", "arch", arch)
+	fmt.Printf("Successfully detected architecture: %s\n", arch)
 	return arch, nil
 }
 
@@ -285,32 +260,20 @@ func runQ2BootE(cmd *cobra.Command, args []string, cfg *config.VMConfig) error {
 		return fmt.Errorf("configuration validation failed: %w", err)
 	}
 
-	// Validate port availability
-	if err := vm.ValidatePortsAvailable(cfg.SSHPort, cfg.MonitorPort); err != nil {
-		return err
-	}
-
-	// Validate architecture separately to avoid import cycle
-	if !vm.IsArchSupported(cfg.Arch) {
-		return fmt.Errorf("invalid architecture '%s'. Valid options: %v", cfg.Arch, vm.SupportedArchitectures())
-	}
-
-	// Create VM based on architecture
+	// Create VM (errors on unsupported architecture).
 	virtualMachine, err := vm.CreateVM(cfg.Arch)
 	if err != nil {
 		return err
 	}
 
-	// Configure the VM
 	virtualMachine.Configure(cfg)
 
-	// Validate the configured VM (this will include QEMU binary checks)
+	// Includes QEMU-binary, port-availability, and disk-path checks.
 	if err := virtualMachine.Validate(); err != nil {
 		return fmt.Errorf("VM validation failed: %w", err)
 	}
 
-	// Run the VM
-	fmt.Println("Starting VM", "arch", cfg.Arch)
+	fmt.Printf("Starting VM (arch=%s)\n", cfg.Arch)
 	return virtualMachine.Run()
 }
 
@@ -318,7 +281,7 @@ func main() {
 	// Initialize logger
 
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println("Fatal error", "error", err)
+		fmt.Fprintf(os.Stderr, "Fatal error: %v\n", err)
 		os.Exit(1)
 	}
 }

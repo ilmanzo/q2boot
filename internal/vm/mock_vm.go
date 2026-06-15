@@ -12,9 +12,9 @@ type MockVM struct {
 
 // NewMockVM creates a new MockVM instance.
 func NewMockVM() *MockVM {
-	return &MockVM{
-		BaseVM: NewBaseVM(),
-	}
+	m := &MockVM{BaseVM: NewBaseVM()}
+	m.self = m
+	return m
 }
 
 // QEMUBinary is a mock implementation of the QEMUBinary method.
@@ -63,7 +63,7 @@ func (m *MockVM) Validate() error {
 	if m.ValidateFunc != nil {
 		return m.ValidateFunc()
 	}
-	return m.BaseVM.Validate(m)
+	return m.BaseVM.Validate()
 }
 
 // Configure is a mock implementation of the Configure method.

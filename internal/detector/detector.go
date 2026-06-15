@@ -6,12 +6,14 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"slices"
+	"regexp"
 	"strings"
 )
 
-// SupportedArchitectures lists all architectures that can be detected
-var SupportedArchitectures = []string{"x86_64", "aarch64", "ppc64le", "s390x"}
+// archFilenameRe matches an architecture token in a disk-image filename when
+// preceded by one of the conventional separators (`-`, `_`, `@`). The leading
+// separator avoids spurious matches inside version numbers etc.
+var archFilenameRe = regexp.MustCompile(`[-_@](x86_64|aarch64|ppc64le|s390x)\b`)
 
 // DetectArchitecture attempts to detect the architecture from a disk image.
 // It tries multiple detection methods in order of reliability.
@@ -36,16 +38,9 @@ var DetectArchitecture = func(diskPath string) (string, error) {
 }
 
 func detectByFilename(diskPath string) (string, error) {
-	lowerCasePath := strings.ToLower(diskPath)
-
-	// Iterate over supported architectures and check if they are in the filename
-	for _, arch := range SupportedArchitectures {
-		// Use word boundaries or common separators to avoid partial matches (e.g., "s390" in a version number)
-		if strings.Contains(lowerCasePath, "@"+arch) || strings.Contains(lowerCasePath, "-"+arch) || strings.Contains(lowerCasePath, "_"+arch) {
-			return arch, nil
-		}
+	if m := archFilenameRe.FindStringSubmatch(strings.ToLower(diskPath)); m != nil {
+		return m[1], nil
 	}
-
 	return "", fmt.Errorf("could not deduce architecture from filename for '%s'", diskPath)
 }
 
@@ -113,9 +108,4 @@ func detectByVirtCat(diskPath string) (string, error) {
 
 	// If we don't find a clear ELF match, the output is ambiguous.
 	return "", fmt.Errorf("virt-cat/file did not reveal a clear ELF architecture for '%s'; output: %s", diskPath, strings.TrimSpace(output))
-}
-
-// IsArchSupported checks if the given architecture is supported
-func IsArchSupported(arch string) bool {
-	return slices.Contains(SupportedArchitectures, arch)
 }

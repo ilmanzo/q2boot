@@ -1,7 +1,6 @@
 package vm
 
 import (
-	"fmt"
 	"slices"
 	"strings"
 	"testing"
@@ -350,54 +349,6 @@ func TestGetMissingQEMUBinaries(t *testing.T) {
 		if !found {
 			t.Errorf("GetMissingQEMUBinaries() returned unsupported architecture: %s", arch)
 		}
-	}
-}
-
-func TestValidateArchitectureSupport(t *testing.T) {
-	tests := []struct {
-		name    string
-		arch    string
-		wantErr bool
-	}{
-		{
-			name:    "unsupported architecture",
-			arch:    "unsupported",
-			wantErr: true,
-		},
-		{
-			name:    "empty architecture",
-			arch:    "",
-			wantErr: true,
-		},
-	}
-
-	// Test with all supported architectures - these may or may not have errors
-	// depending on whether QEMU is installed on the test system
-	for _, arch := range SupportedArchitectures() {
-		tests = append(tests, struct {
-			name    string
-			arch    string
-			wantErr bool
-		}{
-			name: fmt.Sprintf("supported architecture %s", arch),
-			arch: arch,
-			// Don't specify wantErr since it depends on system setup
-		})
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := ValidateArchitectureSupport(tt.arch)
-
-			// For unsupported/empty architectures, we definitely expect an error
-			if tt.arch == "unsupported" || tt.arch == "" {
-				if err == nil {
-					t.Errorf("ValidateArchitectureSupport() should return error for %s", tt.arch)
-				}
-			}
-			// For supported architectures, we just check that the function doesn't panic
-			// The result depends on whether QEMU binaries are installed
-		})
 	}
 }
 

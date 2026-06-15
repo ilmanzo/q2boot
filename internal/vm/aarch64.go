@@ -18,9 +18,8 @@ var aavmfCodePaths = []string{
 
 // NewAARCH64VM creates a new AARCH64VM instance
 func NewAARCH64VM() *AARCH64VM {
-	vm := &AARCH64VM{
-		BaseVM: NewBaseVM(),
-	}
+	vm := &AARCH64VM{BaseVM: NewBaseVM()}
+	vm.self = vm
 
 	// Set default firmware path if not already set
 	if vm.FirmwarePath == "" {
@@ -106,14 +105,4 @@ func (vm *AARCH64VM) GetNonGraphicalDisplayArgs() []string {
 		"-serial",
 		"mon:stdio",
 	}
-}
-
-// Validate checks the VM configuration and satisfies the VM interface.
-func (vm *AARCH64VM) Validate() error {
-	return vm.BaseVM.Validate(vm)
-}
-
-// Run executes the VM and satisfies the VM interface.
-func (vm *AARCH64VM) Run() error {
-	return vm.run(vm)
 }

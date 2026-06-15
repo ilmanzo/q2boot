@@ -27,7 +27,6 @@ type VMConfig struct {
 	SSHPort       uint16   `json:"ssh_port" mapstructure:"ssh_port"`
 	MonitorPort   uint16   `json:"monitor_port" mapstructure:"monitor_port"`
 	LogFile       string   `json:"log_file" mapstructure:"log_file"`
-	SerialLogPath string   `json:"serial_log_path" mapstructure:"serial_log_path"`
 	WriteMode     bool     `json:"write_mode" mapstructure:"write_mode"`
 	Graphical     bool     `json:"graphical" mapstructure:"graphical"`
 	Confirm       bool     `json:"confirm" mapstructure:"confirm"`
@@ -40,15 +39,14 @@ type VMConfig struct {
 // is still useful for testing and programmatic config creation
 func DefaultConfig() *VMConfig {
 	return &VMConfig{
-		CPU:           DefaultCPU,
-		RAMGb:         DefaultRAMGb,
-		SSHPort:       DefaultSSHPort,
-		MonitorPort:   DefaultMonitorPort, // Default to 0, meaning disabled
-		LogFile:       DefaultLogFile,
-		SerialLogPath: "",
-		WriteMode:     false,
-		Graphical:     false,
-		Confirm:       false,
+		CPU:         DefaultCPU,
+		RAMGb:       DefaultRAMGb,
+		SSHPort:     DefaultSSHPort,
+		MonitorPort: DefaultMonitorPort, // Default to 0, meaning disabled
+		LogFile:     DefaultLogFile,
+		WriteMode:   false,
+		Graphical:   false,
+		Confirm:     false,
 	}
 }
 

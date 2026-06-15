@@ -3,7 +3,6 @@ package vm
 import (
 	"fmt"
 	"slices"
-	"strings"
 )
 
 // CreateVM creates a VM instance based on the specified architecture
@@ -71,13 +70,4 @@ func GetMissingQEMUBinaries() []string {
 	}
 
 	return missing
-}
-
-// ValidateArchitectureSupport checks if the given architecture is supported
-func ValidateArchitectureSupport(arch string) error {
-	if !IsArchSupported(arch) {
-		return fmt.Errorf("unsupported architecture: %s. Supported architectures: %s",
-			arch, strings.Join(SupportedArchitectures(), ", "))
-	}
-	return nil
 }
