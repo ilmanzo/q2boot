@@ -86,15 +86,21 @@ func downloadHTTP(url, dest string) error {
 	}
 	defer out.Close()
 
-	// Initialize progress reader
-	pr := &ProgressReader{
-		Reader: resp.Body,
-		Total:  resp.ContentLength,
-	}
+	pr := &ProgressReader{Reader: resp.Body, Total: resp.ContentLength}
 
+	// io.Copy surfaces partial-read errors (incl. unexpected EOF on a dropped
+	// TCP stream) as a non-nil err, so a silent truncation is not possible
+	// here. The post-copy length cross-check guards against a server that
+	// advertises Content-Length but closes the stream cleanly mid-body.
 	_, err = io.Copy(out, pr)
-	fmt.Println() // Print a newline after download completes
-	return err
+	fmt.Println()
+	if err != nil {
+		return err
+	}
+	if pr.Total > 0 && pr.Current != pr.Total {
+		return fmt.Errorf("incomplete download: got %d bytes, expected %d", pr.Current, pr.Total)
+	}
+	return nil
 }
 
 // ProgressReader wraps an io.Reader and prints progress to stdout
