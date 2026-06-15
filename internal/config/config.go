@@ -1,9 +1,6 @@
 package config
 
-import (
-	"fmt"
-	"os"
-)
+import "fmt"
 
 // Validation constants
 const (
@@ -71,10 +68,6 @@ func (c *VMConfig) Validate() error {
 
 	if c.DiskPath == "" {
 		return fmt.Errorf("disk image path is required (pass it as the positional argument: q2boot <disk_image_path>)")
-	}
-
-	if _, err := os.Stat(c.DiskPath); os.IsNotExist(err) {
-		return fmt.Errorf("disk image not found at '%s'", c.DiskPath)
 	}
 
 	return nil

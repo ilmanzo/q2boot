@@ -201,6 +201,8 @@ func runQ2BootE(cmd *cobra.Command, args []string, cfg *config.VMConfig) error {
 		}
 		defer cleanup()
 		cfg.DiskPath = localPath
+	} else if _, err := os.Stat(cfg.DiskPath); err != nil {
+		return fmt.Errorf("disk image not accessible: %w", err)
 	}
 
 	// If architecture was not specified anywhere (flag, env, or config file),

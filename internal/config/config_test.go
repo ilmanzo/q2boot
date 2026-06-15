@@ -180,17 +180,8 @@ func TestValidate(t *testing.T) {
 			},
 			wantErr: true,
 		},
-		{
-			name: "invalid disk path - not found",
-			config: &VMConfig{
-				Arch:     "x86_64",
-				CPU:      2,
-				RAMGb:    4,
-				SSHPort:  2222,
-				DiskPath: "/path/to/non/existent/disk.img",
-			},
-			wantErr: true,
-		},
+		// Note: existence of DiskPath is checked at the call site (main.go),
+		// not in VMConfig.Validate, which is pure value validation.
 	}
 
 	for _, tt := range tests {
