@@ -42,8 +42,21 @@ settings like KVM acceleration, virtio drivers, and networking while allowing
 customization through both configuration files and command-line options.
 
 For advanced use cases, you can pass custom arguments directly to QEMU using the -qemu-extra flag.`,
-	Args: cobra.ExactArgs(1),
+	Args: diskPathThenPassthrough,
 	RunE: runQ2Boot,
+}
+
+// diskPathThenPassthrough accepts `<disk>` and `<disk> -- <extra qemu args...>`.
+// Anything after `--` is forwarded verbatim to QEMU.
+func diskPathThenPassthrough(cmd *cobra.Command, args []string) error {
+	n := cmd.ArgsLenAtDash()
+	if n < 0 {
+		n = len(args)
+	}
+	if n != 1 {
+		return fmt.Errorf("requires exactly one disk image path (got %d). Use `--` to forward extra args to QEMU", n)
+	}
+	return nil
 }
 
 var versionCmd = &cobra.Command{
@@ -193,6 +206,9 @@ func detectArchitecture(diskPath string) (string, error) {
 func runQ2BootE(cmd *cobra.Command, args []string, cfg *config.VMConfig) error {
 	applyChangedFlags(cmd, cfg)
 	cfg.DiskPath = args[0]
+	if n := cmd.ArgsLenAtDash(); n >= 0 {
+		cfg.ExtraQemuArgs = append(cfg.ExtraQemuArgs, args[n:]...)
+	}
 	remote := downloader.IsRemote(cfg.DiskPath)
 
 	// Remote + --write-mode is incoherent: the local copy lives in a temp

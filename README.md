@@ -132,15 +132,20 @@ q2boot server.img -w --ssh-port 2223
 
 ### Advanced Usage
 
-For advanced use cases, you can pass custom arguments directly to QEMU using the `--qemu-extra` (or `-e`) flag. This is useful for enabling experimental features or using devices not configured by default.
+For advanced use cases, you can pass custom arguments directly to QEMU. Use `--` to forward every following argument verbatim — usually the easiest form:
 
 ```bash
-# Pass custom arguments to enable a vhost-user-fs device
+# Everything after `--` is appended to the generated QEMU command
+q2boot my-vm.img -- -device usb-tablet -display gtk
+```
+
+The `--qemu-extra` (`-e`) flag is also still accepted and can be combined with `--`:
+
+```bash
 q2boot my-vm.img \
   -e '-chardev' \
   -e 'socket,id=char0,path=/tmp/vhost-fs.sock' \
-  -e '-device' \
-  -e 'vhost-user-fs-pci,chardev=char0,tag=myfs'
+  -- -device 'vhost-user-fs-pci,chardev=char0,tag=myfs'
 ```
 
 ### SSH Access

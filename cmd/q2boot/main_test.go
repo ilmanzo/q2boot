@@ -20,7 +20,7 @@ func setupTest() {
 	// Reset the root command and its flags to a clean state
 	rootCmd = &cobra.Command{
 		Use:  "q2boot [flags] <disk_image_path>",
-		Args: cobra.ExactArgs(1),
+		Args: diskPathThenPassthrough,
 		RunE: runQ2Boot,
 	}
 	// Re-run the flag setup to define all persistent flags on the new command
@@ -150,5 +150,51 @@ func TestFlagOverridesConfig(t *testing.T) {
 	}
 	if cfg.Graphical != false {
 		t.Errorf("Expected graphical to be false from flag, but got %t", cfg.Graphical)
+	}
+}
+
+func TestPassthroughAfterDash(t *testing.T) {
+	setupTest()
+
+	tempDisk := filepath.Join(t.TempDir(), "disk.img")
+	if err := os.WriteFile(tempDisk, []byte("disk"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	originalCreator := vm.CreateVM
+	vm.CreateVM = func(arch string) (vm.VM, error) {
+		mock := vm.NewMockVM()
+		mock.ValidateFunc = func() error { return nil }
+		return mock, nil
+	}
+	defer func() { vm.CreateVM = originalCreator }()
+
+	rootCmd.SetArgs([]string{
+		tempDisk,
+		"--arch", "x86_64",
+		"-e", "-device",
+		"-e", "virtio-balloon",
+		"--",
+		"-device", "usb-tablet",
+		"-display", "gtk",
+	})
+	_ = rootCmd.Execute()
+
+	want := []string{"-device", "virtio-balloon", "-device", "usb-tablet", "-display", "gtk"}
+	if len(cfg.ExtraQemuArgs) != len(want) {
+		t.Fatalf("ExtraQemuArgs len=%d, want %d: %v", len(cfg.ExtraQemuArgs), len(want), cfg.ExtraQemuArgs)
+	}
+	for i, v := range want {
+		if cfg.ExtraQemuArgs[i] != v {
+			t.Errorf("ExtraQemuArgs[%d]=%q, want %q", i, cfg.ExtraQemuArgs[i], v)
+		}
+	}
+}
+
+func TestPassthroughRejectsExtraPositionals(t *testing.T) {
+	setupTest()
+	rootCmd.SetArgs([]string{"disk1.img", "disk2.img"})
+	if err := rootCmd.Execute(); err == nil {
+		t.Fatal("expected error for two positional args")
 	}
 }
