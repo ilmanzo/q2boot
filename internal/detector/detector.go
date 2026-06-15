@@ -14,14 +14,18 @@ import (
 // to avoid matching inside version numbers or unrelated paths.
 var archFilenameRe = regexp.MustCompile(`[-_@](x86_64|aarch64|ppc64le|s390x)\b`)
 
+// Filename is tried first because it's instant and matches the conventional
+// `-arch.qcow2` / `_arch.img` naming the SUSE/Ubuntu/Fedora image servers
+// already use. virt-cat is the fallback for unhelpfully named images, but it
+// shells out to libguestfs and can take 10+ seconds on a cold cache.
 var DetectArchitecture = func(diskPath string) (string, error) {
 	if diskPath == "" {
 		return "", fmt.Errorf("disk path is empty")
 	}
-	if arch, err := detectByVirtCat(diskPath); err == nil {
+	if arch, err := detectByFilename(diskPath); err == nil {
 		return arch, nil
 	}
-	if arch, err := detectByFilename(diskPath); err == nil {
+	if arch, err := detectByVirtCat(diskPath); err == nil {
 		return arch, nil
 	}
 	return "", fmt.Errorf("could not detect architecture from disk image '%s'. Please specify it explicitly with --arch flag", diskPath)

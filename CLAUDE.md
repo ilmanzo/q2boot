@@ -26,7 +26,7 @@ Flow in `runQ2BootE`:
 1. `applyChangedFlags` overlays CLI flag values onto the file-loaded `*config.VMConfig`. Precedence: **CLI flag > config file > defaults**. Bool/port detection uses `cmd.Flags().Changed(name)`. There is no viper; merge is explicit code in `main.go`.
 2. If disk path is a remote URL (`http/https/ftp/smb`), `downloader.Download` fetches to a temp file with a `cleanup` func (deferred). Local paths are stat-checked for existence.
 3. `--write-mode` is rejected when the disk is remote (changes would vanish with the temp file).
-4. If `cfg.Arch == ""`, `detector.DetectArchitecture` runs: tries `virt-cat <disk> /bin/sh | file -` (ELF arch sniff), falls back to filename regex (`-arch`, `_arch`, `@arch`).
+4. If `cfg.Arch == ""`, `detector.DetectArchitecture` runs: tries the filename regex first (`-arch`, `_arch`, `@arch` — instant, matches conventional distro image names), then falls back to `virt-cat <disk> /bin/sh | file -` (libguestfs ELF sniff, slow but reliable).
 5. `cfg.Validate()` (pure value ranges) → `vm.CreateVM(arch)` → `Configure(cfg)` → `Validate()` (binary + port + disk-set check) → `Run()`.
 
 ### VM package (`internal/vm`)
