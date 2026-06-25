@@ -74,6 +74,16 @@ q2boot disk.img -w
 q2boot disk.img --confirm
 ```
 
+### Exiting the VM Console
+
+When running in headless/console mode (the default), your terminal connects directly to the VM's serial console. To exit the console, stop the VM, and return to the host OS:
+
+* Press `Ctrl-a` then `x`.
+
+Other useful shortcuts inside the console:
+* `Ctrl-a` then `c` - Switch between the VM console and the QEMU monitor
+* `Ctrl-a` then `h` - Show help for console shortcuts
+
 ## Command Line Options
 
 | Option | Short | Description | Default |
@@ -209,7 +219,8 @@ Q2Boot generates commands similar to:
 qemu-system-x86_64 \
   -M q35 -enable-kvm -cpu host \
   -smp 2 -m 4G \
-  -drive file=disk.img,if=virtio,cache=writeback,aio=native,discard=unmap,cache.direct=on \
+  -drive file=disk.img,format=qcow2,if=none,id=disk0 \
+  -device virtio-blk-pci,drive=disk0,num-queues=2 \
   -netdev user,id=net0,hostfwd=tcp::2222-:22 \
   -device virtio-net-pci,netdev=net0
 ```
@@ -359,6 +370,9 @@ A: Use `qemu-img create -f qcow2 disk.img 20G` or `make create-test-disk` for a 
 
 **Q: What's the difference between snapshot and write mode?**
 A: Snapshot mode (default) discards all changes when the VM exits. Write mode saves changes permanently.
+
+**Q: How do I exit the VM serial console?**
+A: Press `Ctrl-a` followed by `x` to quit QEMU and return to your host terminal.
 
 ## License
 

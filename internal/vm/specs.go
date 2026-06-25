@@ -2,6 +2,7 @@ package vm
 
 import (
 	"fmt"
+	"io"
 	"os"
 )
 
@@ -32,6 +33,11 @@ type ArchSpec struct {
 	// Per-disk NVRAM vars file lives at <diskpath>.vars and is created on
 	// first boot, then reused.
 	UEFIFirmware []string
+	// UEFIVars lists candidate paths for the UEFI vars template, parallel to
+	// UEFIFirmware (same index = paired). The template is copied to create the
+	// per-disk vars file so NVRAM is correctly initialised rather than
+	// zero-filled, and is sized correctly even if CODE and VARS differ.
+	UEFIVars []string
 
 	// InstallPkgs names the per-distro package providing this arch's QEMU
 	// binary, used by the version/check output. Order: Ubuntu/Debian, SUSE
@@ -61,6 +67,10 @@ var archSpecs = []ArchSpec{
 		UEFIFirmware: []string{
 			"/usr/share/qemu/aavmf-aarch64-code.bin", // SUSE
 			"/usr/share/AAVMF/AAVMF_CODE.fd",         // Debian/Ubuntu
+		},
+		UEFIVars: []string{
+			"/usr/share/qemu/aavmf-aarch64-vars.bin", // SUSE
+			"/usr/share/AAVMF/AAVMF_VARS.fd",         // Debian/Ubuntu
 		},
 		InstallPkgs: InstallPkgs{"qemu-system-arm", "arm", "aarch64"},
 	},
@@ -96,15 +106,21 @@ func specFor(arch string) (ArchSpec, bool) {
 // archVM is the single VM implementation; behaviour is driven entirely by spec.
 type archVM struct {
 	*BaseVM
-	spec ArchSpec
+	spec             ArchSpec
+	VarsTemplatePath string
 }
 
 func newArchVM(spec ArchSpec) *archVM {
 	v := &archVM{BaseVM: NewBaseVM(), spec: spec}
 	v.self = v
-	for _, p := range spec.UEFIFirmware {
+	for i, p := range spec.UEFIFirmware {
 		if _, err := os.Stat(p); err == nil {
 			v.FirmwarePath = p
+			if i < len(spec.UEFIVars) {
+				if _, err := os.Stat(spec.UEFIVars[i]); err == nil {
+					v.VarsTemplatePath = spec.UEFIVars[i]
+				}
+			}
 			break
 		}
 	}
@@ -125,13 +141,20 @@ func (v *archVM) uefiArgs() []string {
 	if v.FirmwarePath == "" || v.DiskPath == "" {
 		return nil
 	}
-	info, err := os.Stat(v.FirmwarePath)
+	// Size and template come from the vars blob, not the code blob — they can
+	// differ across distros even though both are currently 64 MiB on SUSE/Debian.
+	varsTemplate := v.VarsTemplatePath
+	sizeSource := v.FirmwarePath // fallback: same size assumption
+	if varsTemplate != "" {
+		sizeSource = varsTemplate
+	}
+	info, err := os.Stat(sizeSource)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "warning: cannot stat firmware %s: %v (skipping UEFI pflash)\n", v.FirmwarePath, err)
+		fmt.Fprintf(os.Stderr, "warning: cannot stat UEFI vars template %s: %v (skipping UEFI pflash)\n", sizeSource, err)
 		return nil
 	}
 	varsPath := v.DiskPath + ".vars"
-	if err := ensureVarsFile(varsPath, info.Size()); err != nil {
+	if err := ensureVarsFile(varsPath, info.Size(), varsTemplate); err != nil {
 		fmt.Fprintf(os.Stderr, "warning: cannot prepare UEFI vars file %s: %v (skipping UEFI pflash)\n", varsPath, err)
 		return nil
 	}
@@ -143,7 +166,7 @@ func (v *archVM) uefiArgs() []string {
 
 func (v *archVM) GetDiskArgs() []string {
 	return []string{
-		"-drive", fmt.Sprintf("file=%s,if=none,id=%s,cache=none,aio=native,discard=unmap", v.DiskPath, v.spec.DiskID),
+		"-drive", fmt.Sprintf("file=%s,format=qcow2,if=none,id=%s", v.DiskPath, v.spec.DiskID),
 		"-device", fmt.Sprintf("%s,drive=%s%s,num-queues=%d", v.spec.DiskBus, v.spec.DiskID, v.spec.DiskDevSuffix, v.CPU),
 	}
 }
@@ -159,29 +182,42 @@ func (v *archVM) GetGraphicalArgs() []string {
 	if !v.spec.SerialGraphical {
 		return v.spec.Graphical
 	}
-	if v.LogFile != "" {
-		return []string{"-nographic"}
-	}
 	return []string{"-nographic", "-serial", "stdio"}
 }
 
 func (v *archVM) GetNonGraphicalDisplayArgs() []string {
-	if v.spec.SerialGraphical || v.LogFile != "" {
+	if v.spec.SerialGraphical {
 		return []string{"-nographic"}
 	}
 	return []string{"-nographic", "-serial", "mon:stdio"}
 }
 
-// ensureVarsFile creates path as a zero-filled file of exactly size bytes if
-// it does not exist; existing files are left untouched (an unexpected size
-// is surfaced as an error so we don't silently feed QEMU a mismatched blob).
-func ensureVarsFile(path string, size int64) error {
+// ensureVarsFile creates path as a copy of template (if non-empty) or a
+// zero-filled file of exactly size bytes. Existing files are left untouched;
+// an unexpected size is surfaced as an error so we don't silently feed QEMU a
+// mismatched blob.
+func ensureVarsFile(path string, size int64, template string) error {
 	if info, err := os.Stat(path); err == nil {
 		if info.Size() != size {
 			return fmt.Errorf("existing vars file %s has size %d, expected %d (delete it to reinitialise)", path, info.Size(), size)
 		}
 		return nil
 	}
+	if template != "" {
+		src, err := os.Open(template)
+		if err != nil {
+			return err
+		}
+		defer src.Close()
+		dst, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
+		if err != nil {
+			return err
+		}
+		defer dst.Close()
+		_, err = io.Copy(dst, src)
+		return err
+	}
+	// Fallback: zero-fill (no template available).
 	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
 	if err != nil {
 		return err

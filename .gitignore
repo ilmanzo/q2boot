@@ -20,4 +20,5 @@ test-disk.img
 coverage.*
 build/
 diskimages/
-q2boot
+/q2boot
+q2boot.log

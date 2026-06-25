@@ -1,10 +1,7 @@
 package vm
 
-import "github.com/ilmanzo/q2boot/internal/config"
-
 type MockVM struct {
 	*BaseVM
-	RunFunc              func() error
 	ValidateFunc         func() error
 	GetGraphicalArgsFunc func() []string
 }
@@ -31,12 +28,7 @@ func (m *MockVM) GetNonGraphicalDisplayArgs() []string {
 	return []string{"-display", "mock-headless"}
 }
 
-func (m *MockVM) Run() error {
-	if m.RunFunc != nil {
-		return m.RunFunc()
-	}
-	return nil
-}
+func (m *MockVM) Run() error { return nil }
 
 func (m *MockVM) Validate() error {
 	if m.ValidateFunc != nil {
@@ -45,6 +37,3 @@ func (m *MockVM) Validate() error {
 	return m.BaseVM.Validate()
 }
 
-func (m *MockVM) Configure(cfg *config.VMConfig) {
-	m.BaseVM.Configure(cfg)
-}

@@ -3,9 +3,13 @@ package downloader
 import (
 	"bytes"
 	"io"
+	"net"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestIsRemote(t *testing.T) {
@@ -54,6 +58,30 @@ func TestVerifySHA256(t *testing.T) {
 	}
 	if err := VerifySHA256("/no/such/file", helloHash); err == nil {
 		t.Error("missing file accepted")
+	}
+}
+
+func TestDownloadHTTPHeaderTimeout(t *testing.T) {
+	// Server accepts the connection then stalls before writing any headers.
+	orig := httpClient
+	httpClient = &http.Client{
+		Transport: &http.Transport{
+			DialContext:           (&net.Dialer{Timeout: 5 * time.Second}).DialContext,
+			TLSHandshakeTimeout:   5 * time.Second,
+			ResponseHeaderTimeout: 100 * time.Millisecond, // very short for the test
+		},
+	}
+	defer func() { httpClient = orig }()
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(2 * time.Second) // outlasts ResponseHeaderTimeout
+	}))
+	defer srv.Close()
+
+	dest := filepath.Join(t.TempDir(), "out")
+	err := downloadHTTP(srv.URL, dest)
+	if err == nil {
+		t.Fatal("expected timeout error, got nil")
 	}
 }
 

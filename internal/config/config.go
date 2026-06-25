@@ -1,6 +1,10 @@
 package config
 
-import "fmt"
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+)
 
 const (
 	MinCPU             = 1
@@ -12,8 +16,22 @@ const (
 	DefaultRAMGb       = 2
 	DefaultSSHPort     = 2222
 	DefaultMonitorPort = 0
-	DefaultLogFile     = "q2boot.log"
 )
+
+// defaultLogFile returns $XDG_STATE_HOME/q2boot/q2boot.log, falling back to
+// ~/.local/state/q2boot/q2boot.log. Falls back to "q2boot.log" only when the
+// home directory is unresolvable (rare; e.g. no passwd entry).
+func defaultLogFile() string {
+	dir := os.Getenv("XDG_STATE_HOME")
+	if dir == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return "q2boot.log"
+		}
+		dir = filepath.Join(home, ".local", "state")
+	}
+	return filepath.Join(dir, "q2boot", "q2boot.log")
+}
 
 type VMConfig struct {
 	Arch          string   `json:"arch"`
@@ -35,7 +53,7 @@ func DefaultConfig() *VMConfig {
 		RAMGb:       DefaultRAMGb,
 		SSHPort:     DefaultSSHPort,
 		MonitorPort: DefaultMonitorPort,
-		LogFile:     DefaultLogFile,
+		LogFile:     defaultLogFile(),
 	}
 }
 

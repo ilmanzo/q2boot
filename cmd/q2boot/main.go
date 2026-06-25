@@ -240,6 +240,10 @@ func runQ2BootE(cmd *cobra.Command, args []string, cfg *config.VMConfig) error {
 		fmt.Println("SHA-256 OK.")
 	}
 
+	if !cfg.Graphical && detector.HasLUKSPartition(cfg.DiskPath) {
+		return fmt.Errorf("disk contains LUKS-encrypted partitions: use --graphical (-g) to enter the passphrase (serial console cannot relay keyboard input before the OS boots)")
+	}
+
 	if cfg.Arch == "" {
 		detectedArch, err := detectArchitecture(cfg.DiskPath)
 		if err != nil {

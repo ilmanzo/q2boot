@@ -19,11 +19,6 @@ func SupportedArchitectures() []string {
 	return out
 }
 
-func IsArchSupported(arch string) bool {
-	_, ok := specFor(arch)
-	return ok
-}
-
 func GetQEMUBinaryForArch(arch string) (string, error) {
 	spec, ok := specFor(arch)
 	if !ok {

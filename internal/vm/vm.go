@@ -2,9 +2,11 @@ package vm
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -34,8 +36,7 @@ const (
 	MonitorProtocol    = "telnet"
 	AudioDeviceID      = "snd0"
 	AudioDeviceType    = "none"
-	SnapshotArgument   = "-snapshot"
-	SerialConsoleStdio = "stdio"
+	SnapshotArgument = "-snapshot"
 )
 
 type VM interface {
@@ -152,12 +153,6 @@ func (v *BaseVM) buildArgs(vm VM, extraArgs []string) []string {
 		}
 	}
 
-	if v.LogFile != "" {
-		args = append(args, "-chardev", fmt.Sprintf("stdio,mux=on,id=char0,logfile=%s,signal=off", v.LogFile))
-		args = append(args, "-mon", "chardev=char0,mode=readline")
-		args = append(args, "-serial", "chardev:char0")
-	}
-
 	return args
 }
 
@@ -167,7 +162,7 @@ var DryRun bool
 
 func (v *BaseVM) Run() error {
 	args := v.buildArgs(v.self, nil)
-	err := RunVM(v.self.QEMUBinary(), args, v.Confirm)
+	err := RunVM(v.self.QEMUBinary(), args, v.Confirm, v.LogFile)
 	if err != nil && v.LogFile != "" {
 		printLogTail(v.LogFile, 20)
 	}
@@ -193,7 +188,7 @@ func printLogTail(path string, n int) {
 	fmt.Fprintln(os.Stderr, "--- end log ---")
 }
 
-func RunVM(binary string, args []string, confirm bool) error {
+func RunVM(binary string, args []string, confirm bool, logFile string) error {
 	fmt.Println("Starting QEMU with the following command:")
 	fmt.Println(FormatCommand(binary, args))
 
@@ -208,6 +203,19 @@ func RunVM(binary string, args []string, confirm bool) error {
 		fmt.Scanln(&input)
 	}
 
+	var stdout io.Writer = os.Stdout
+	if logFile != "" {
+		if err := os.MkdirAll(filepath.Dir(logFile), 0700); err != nil {
+			return fmt.Errorf("failed to create log directory: %w", err)
+		}
+		f, err := os.OpenFile(logFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+		if err != nil {
+			return fmt.Errorf("failed to open log file %s: %w", logFile, err)
+		}
+		defer f.Close()
+		stdout = io.MultiWriter(os.Stdout, f)
+	}
+
 	// exec.Command takes an explicit argv (no shell), so user-supplied
 	// --qemu-extra strings cannot inject extra commands via metacharacters
 	// — each element becomes one argv slot verbatim. They CAN still pass
@@ -215,7 +223,7 @@ func RunVM(binary string, args []string, confirm bool) error {
 	// here is "no shell injection", not "no QEMU misuse".
 	cmd := exec.Command(binary, args...)
 	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
+	cmd.Stdout = stdout
 	cmd.Stderr = os.Stderr
 
 	err := cmd.Run()

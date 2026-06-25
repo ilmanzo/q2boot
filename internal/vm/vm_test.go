@@ -22,8 +22,8 @@ func TestNewBaseVM(t *testing.T) {
 	if vm.SSHPort != 2222 {
 		t.Errorf("Expected SSHPort to be 2222, got %d", vm.SSHPort)
 	}
-	if vm.LogFile != "q2boot.log" {
-		t.Errorf("Expected LogFile to be q2boot.log, got %s", vm.LogFile)
+	if vm.LogFile != config.DefaultConfig().LogFile {
+		t.Errorf("Expected LogFile to be %s, got %s", config.DefaultConfig().LogFile, vm.LogFile)
 	}
 	if vm.Graphical {
 		t.Errorf("Expected Graphical to be false")
@@ -152,28 +152,6 @@ func TestSupportedArchitectures(t *testing.T) {
 	}
 }
 
-func TestIsArchSupported(t *testing.T) {
-	tests := []struct {
-		name      string
-		arch      string
-		supported bool
-	}{
-		{"x86_64 supported", "x86_64", true},
-		{"aarch64 supported", "aarch64", true},
-		{"ppc64le supported", "ppc64le", true},
-		{"s390x supported", "s390x", true},
-		{"unsupported arch", "unsupported", false},
-		{"empty arch", "", false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := IsArchSupported(tt.arch); got != tt.supported {
-				t.Errorf("IsArchSupported() = %v, want %v", got, tt.supported)
-			}
-		})
-	}
-}
 
 // TestArchSpecs verifies each registered arch produces the expected static
 // machine args. The dynamic bits (disk/net args with embedded DiskPath/CPU)
@@ -571,7 +549,7 @@ func TestFormatCommand(t *testing.T) {
 func TestRunVMDryRun(t *testing.T) {
 	DryRun = true
 	defer func() { DryRun = false }()
-	if err := RunVM("/bin/false", []string{"--ignored"}, false); err != nil {
+	if err := RunVM("/bin/false", []string{"--ignored"}, false, ""); err != nil {
 		t.Errorf("dry-run RunVM should not error, got: %v", err)
 	}
 }

@@ -5,13 +5,27 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 )
+
+// httpClient sets connection-phase timeouts only. The body read is unbounded
+// so multi-GB image downloads are not killed mid-transfer.
+var httpClient = &http.Client{
+	Transport: &http.Transport{
+		DialContext: (&net.Dialer{
+			Timeout: 30 * time.Second,
+		}).DialContext,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ResponseHeaderTimeout: 30 * time.Second,
+	},
+}
 
 // VerifySHA256 returns nil iff the file at path hashes to expectedHex
 // (case-insensitive). Use this for downloaded images: a fast Content-Length
@@ -94,7 +108,7 @@ func Download(remoteURL string) (string, func(), error) {
 }
 
 func downloadHTTP(url, dest string) error {
-	resp, err := http.Get(url)
+	resp, err := httpClient.Get(url)
 	if err != nil {
 		return err
 	}

@@ -29,11 +29,12 @@ func TestE2E(t *testing.T) {
 	}
 
 	// Define architectures and their disk images
-	diskImages := map[string]string{
-		"x86_64":  "../../diskimages/sle-16.0-x86_64-135.5-textmode@64bit.qcow2",
-		"aarch64": "../../diskimages/sle-16.0-aarch64-135.5-textmode@aarch64.qcow2",
-		"ppc64le": "../../diskimages/sle-16.0-ppc64le-135.5-textmode@ppc64le-p10-virtio.qcow2",
-		"s390x":   "../../diskimages/sle-16.0-s390x-135.5-textmode@s390x-kvm.qcow2",
+	diskImages := map[string]string{}
+	for _, arch := range []string{"x86_64", "aarch64", "ppc64le", "s390x"} {
+		matches, _ := filepath.Glob("../../diskimages/sle-16.0-" + arch + "-*-textmode*.qcow2")
+		if len(matches) > 0 {
+			diskImages[arch] = matches[0]
+		}
 	}
 
 	// Convert to absolute paths

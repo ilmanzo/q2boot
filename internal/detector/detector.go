@@ -38,6 +38,42 @@ func detectByFilename(diskPath string) (string, error) {
 	return "", fmt.Errorf("could not deduce architecture from filename for '%s'", diskPath)
 }
 
+// HasLUKSPartition reports whether the disk image contains a LUKS-encrypted
+// block device. A *closed* LUKS container is not a mountable filesystem, so
+// `virt-filesystems --filesystems` (and --all/--extra/--long) never lists it;
+// the only reliable signal is libguestfs' vfs-type, which returns
+// "crypto_LUKS" for an encrypted device. We enumerate partitions + whole
+// devices, then probe each. Returns false when guestfish is missing or the
+// probe fails, so a missing guestfs-tools install never blocks a launch.
+//
+// ponytail: two appliance boots (~3s) on every non-graphical launch when
+// guestfish is installed. Acceptable for the safety net; if launch latency
+// matters, fold this into the same appliance boot as arch detection.
+var HasLUKSPartition = func(diskPath string) bool {
+	if _, err := exec.LookPath("guestfish"); err != nil {
+		return false
+	}
+	out, err := exec.Command("guestfish", "--ro", "-a", diskPath,
+		"run", ":", "list-partitions", ":", "list-devices").Output()
+	if err != nil {
+		return false
+	}
+	args := []string{"--ro", "-a", diskPath, "run"}
+	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		if dev := strings.TrimSpace(line); dev != "" {
+			args = append(args, ":", "vfs-type", dev)
+		}
+	}
+	if len(args) == 4 { // nothing to probe (empty/unreadable image)
+		return false
+	}
+	types, err := exec.Command("guestfish", args...).Output()
+	if err != nil {
+		return false
+	}
+	return bytes.Contains(types, []byte("crypto_LUKS"))
+}
+
 // detectByVirtCat pipes `virt-cat <disk> /bin/sh | file -`; the ELF header
 // `file` reports is the only reliable cross-distro arch signal.
 func detectByVirtCat(diskPath string) (string, error) {
